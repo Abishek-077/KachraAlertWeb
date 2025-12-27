@@ -39,7 +39,7 @@ export default function RegisterForm() {
         if (!formData.email) {
             newErrors.email = 'Email is required';
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Invalid email format';
+            newErrors.email = 'Invalid email formating';
         }
         if (!formData.phone) {
             newErrors.phone = 'Phone is required';
