@@ -19,6 +19,7 @@ export default function AuthLayout({
         // REMOVED <html> and <body> tags here
         <div className={`${inter.className} bg-gray-50 min-h-screen`}>
             {children}
+            <h5>this include all the childrens </h5>
         </div>
     );
 }
