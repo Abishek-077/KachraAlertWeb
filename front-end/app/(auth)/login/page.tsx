@@ -4,7 +4,7 @@ import LoginForm from '../_components/LoginForm'; // Note: using _components
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Login - KacharaAlert',
+    title: 'Login -KacharaAlert',
     description: 'Sign in to your KacharaAlert account for smart waste management',
 };
 
