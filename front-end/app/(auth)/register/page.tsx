@@ -1,4 +1,4 @@
-// ==================== FILE 4: app/(auth)/register/page.tsx ====================
+// app/(auth)/register/page.tsx
 import { Leaf } from 'lucide-react';
 import RegisterForm from '../_components/RegisterForm';
 import type { Metadata } from 'next';
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-emerald-50 p-4">
-            <div className="w-full max-w-2xl animate-fade-in-up">
+            <div className="w-full max-w-2xl animate-[fadeInUp_0.6s_ease-out]">
                 <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
                     {/* Logo and Header */}
                     <div className="text-center mb-8">
@@ -25,22 +25,6 @@ export default function RegisterPage() {
                     <RegisterForm />
                 </div>
             </div>
-
-            <style jsx>{`
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out;
-        }
-      `}</style>
         </div>
     );
 }

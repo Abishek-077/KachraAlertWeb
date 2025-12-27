@@ -1,6 +1,6 @@
-// ==================== FILE 3: app/(auth)/login/page.tsx ====================
+// app/(auth)/login/page.tsx
 import { Leaf } from 'lucide-react';
-import LoginForm from '../_components/LoginForm';
+import LoginForm from '../_components/LoginForm'; // Note: using _components
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-emerald-50 p-4">
-            <div className="w-full max-w-md animate-fade-in-up">
+            <div className="w-full max-w-md animate-[fadeInUp_0.6s_ease-out]">
                 <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
                     {/* Logo and Header */}
                     <div className="text-center mb-8">
@@ -25,22 +25,6 @@ export default function LoginPage() {
                     <LoginForm />
                 </div>
             </div>
-
-            <style jsx>{`
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out;
-        }
-      `}</style>
         </div>
     );
 }
