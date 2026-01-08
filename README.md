@@ -15,3 +15,11 @@ KachraAlert Web is built to streamline waste reporting and public announcements.
 - 📌 View report status (e.g., pending / in_progress / resolved)
 - 🔔 Receive announcements / alerts
 - ⚙️ Settings (theme, onboarding reset if enabled)
+
+  ### Admin
+- 📢 Create & manage announcements (broadcasts)
+- 🗓️ Manage schedules (pickup schedules / notices)
+- 📊 Dashboard overview (reports + announcements + trends)
+- 🛡️ Role-based access control (admin-only routes)
+
+---
