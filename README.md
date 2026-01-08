@@ -23,3 +23,28 @@ KachraAlert Web is built to streamline waste reporting and public announcements.
 - 🛡️ Role-based access control (admin-only routes)
 
 ---
+
+## 🧱 Tech Stack (Recommended / Typical Setup)
+**Frontend**
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- React Hook Form + Zod (validation)
+- Axios / Fetch API
+
+
+**Backend**
+- Node.js + Express
+- TypeScript
+- MongoDB (Mongoose)
+- JWT Auth (Access/Refresh depending on setup)
+- Clean Architecture structure
+
+**Database**
+- MongoDB Atlas / Local MongoDB
+
+---
+
+## 🗂️ Repository Structure
+
+This repo typically uses a **two-folder setup**:
