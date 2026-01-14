@@ -16,7 +16,7 @@ import {
 
 import { cn } from "./ui";
 import { useRole } from "./useRole";
-import { mockLogout } from "@/app/lib/mock-auth";
+import { useAuth } from "@/app/lib/auth-context";
 
 const baseNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,6 +34,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { role } = useRole();
+  const { logout } = useAuth();
 
   const nav = role === "admin" ? [...baseNav, ...adminNav, ...footerNav] : [...baseNav, ...footerNav];
 
@@ -81,13 +82,8 @@ export default function Sidebar() {
       <div className="mt-6 border-t border-slate-200 pt-4">
         <button
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-          onClick={() => {
-            mockLogout();
-            try {
-              window.localStorage.setItem("kachraalert_role", "resident");
-            } catch {
-              // ignore
-            }
+          onClick={async () => {
+            await logout();
             router.push("/login");
           }}
         >

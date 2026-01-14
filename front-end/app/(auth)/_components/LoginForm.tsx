@@ -7,12 +7,13 @@ import { loginSchema, type LoginFormData } from "../schema";
 import { Eye, EyeOff, Leaf } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { mockLogin } from "@/app/lib/mock-auth";
+import { useAuth } from "@/app/lib/auth-context";
 
 export default function LoginForm() {
     const [show, setShow] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const router = useRouter();
+    const { login } = useAuth();
 
     const {
         register,
@@ -26,7 +27,7 @@ export default function LoginForm() {
     async function onSubmit(values: LoginFormData) {
         setMessage(null);
         try {
-            mockLogin(values.email, values.password);
+            await login({ email: values.email, password: values.password, remember: values.remember });
             router.push("/dashboard");
         } catch (e: any) {
             setMessage(e?.message ?? "Login failed");
@@ -99,13 +100,12 @@ export default function LoginForm() {
                             Remember me
                         </label>
 
-                        <button
-                            type="button"
+                        <Link
+                            href="/forgot-password"
                             className="text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
-                            onClick={() => setMessage("Forgot password is demo-only right now")}
                         >
                             Forgot Password?
-                        </button>
+                        </Link>
                     </div>
 
                     {/* Submit */}
@@ -129,14 +129,14 @@ export default function LoginForm() {
                         <button
                             type="button"
                             className="rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:scale-105 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                            onClick={() => setMessage("Google login is demo-only right now")}
+                            onClick={() => setMessage("Google login is not enabled yet")}
                         >
                             Google
                         </button>
                         <button
                             type="button"
                             className="rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:scale-105 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                            onClick={() => setMessage("Facebook login is demo-only right now")}
+                            onClick={() => setMessage("Facebook login is not enabled yet")}
                         >
                             Facebook
                         </button>
