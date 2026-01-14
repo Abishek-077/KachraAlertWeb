@@ -12,9 +12,10 @@ import {
     type RegisterStep2Data
 } from "../schema";
 import { Home, Truck, Leaf, Eye, EyeOff } from "lucide-react";
-import { mockRegister } from "@/app/lib/mock-auth";
+import { useAuth } from "@/app/lib/auth-context";
 
 type Step1 = RegisterStep1Data;
+
 type Step2 = RegisterStep2Data;
 
 export default function RegisterForm() {
@@ -23,6 +24,7 @@ export default function RegisterForm() {
     const [cacheStep1, setCacheStep1] = useState<Step1 | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const router = useRouter();
+    const { register } = useAuth();
 
     const step1Form = useForm<Step1>({
         resolver: zodResolver(registerStep1Schema),
@@ -50,9 +52,14 @@ export default function RegisterForm() {
 
     async function submitStep2(values: Step2) {
         setMessage(null);
+        if (!cacheStep1) {
+            setMessage("Please complete step 1 first");
+            setStep(1);
+            return;
+        }
         const payload = { ...cacheStep1, ...values };
         try {
-            mockRegister(payload);
+            await register(payload);
             router.push("/dashboard");
         } catch (e: any) {
             setMessage(e?.message ?? "Register failed");

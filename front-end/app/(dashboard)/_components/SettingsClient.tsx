@@ -136,7 +136,6 @@ export default function SettingsClient() {
                 </div>
               </div>
               <Button onClick={() => console.log("Updated")}>Update password</Button>
-              <div className="text-xs text-slate-500">Next: connect to your auth API + JWT refresh.</div>
             </div>
           ) : null}
         </CardBody>
