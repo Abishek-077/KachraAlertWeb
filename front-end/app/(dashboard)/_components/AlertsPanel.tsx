@@ -3,29 +3,29 @@
 import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Info, Siren, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import type { AlertItem } from "../../../lib/types";
 import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
+import { useAlerts } from "@/app/lib/alerts-context";
 
-function iconForSeverity(sev: AlertItem["severity"]) {
+function iconForSeverity(sev: "info" | "warning" | "urgent") {
   if (sev === "urgent") return <Siren size={16} />;
   if (sev === "warning") return <AlertTriangle size={16} />;
   return <Info size={16} />;
 }
 
-function toneForSeverity(sev: AlertItem["severity"]) {
+function toneForSeverity(sev: "info" | "warning" | "urgent") {
   if (sev === "urgent") return "red";
   if (sev === "warning") return "amber";
   return "blue";
 }
 
-export default function AlertsPanel({ items }: { items: AlertItem[] }) {
+export default function AlertsPanel() {
   const router = useRouter();
-  const [local, setLocal] = useState<AlertItem[]>(items);
-  const unread = useMemo(() => local.filter((i) => !i.read).length, [local]);
+  const { alerts, markRead } = useAlerts();
+  const unread = useMemo(() => alerts.filter((i) => !i.read).length, [alerts]);
   return (
     <Card>
       <CardHeader
@@ -37,7 +37,7 @@ export default function AlertsPanel({ items }: { items: AlertItem[] }) {
       />
       <CardBody>
         <div className="space-y-3">
-          {local.slice(0, 3).map((a) => (
+          {alerts.slice(0, 3).map((a) => (
             <div
               key={a.id}
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4"
@@ -62,7 +62,7 @@ export default function AlertsPanel({ items }: { items: AlertItem[] }) {
                 <button
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   onClick={() =>
-                    setLocal((prev) => prev.map((x) => (x.id === a.id ? { ...x, read: true } : x)))
+                    void markRead(a.id)
                   }
                 >
                   <span className="inline-flex items-center gap-2">

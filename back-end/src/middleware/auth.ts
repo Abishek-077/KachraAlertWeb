@@ -20,4 +20,11 @@ export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction
   }
 }
 
+export function requireAdmin(req: AuthRequest, _res: Response, next: NextFunction) {
+  if (req.user?.accountType !== "admin_driver") {
+    return next(new AppError("Admin access required", 403, "FORBIDDEN"));
+  }
+  return next();
+}
+
 export type { AuthRequest };

@@ -5,7 +5,7 @@ export type ApiResponse<T> = {
   errorCode?: string;
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 let accessToken: string | null = null;
 
@@ -53,6 +53,13 @@ export function apiGet<T>(path: string) {
 export function apiPost<T>(path: string, body?: unknown) {
   return request<T>(path, {
     method: "POST",
+    body: body ? JSON.stringify(body) : undefined
+  });
+}
+
+export function apiPatch<T>(path: string, body?: unknown) {
+  return request<T>(path, {
+    method: "PATCH",
     body: body ? JSON.stringify(body) : undefined
   });
 }

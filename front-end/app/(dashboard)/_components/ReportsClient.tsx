@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, Paperclip } from "lucide-react";
 
 import type { ReportItem } from "../../../lib/types";
@@ -9,6 +9,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import Modal from "./Modal";
+import { apiGet, apiPost } from "@/app/lib/api";
 
 function statusTone(s: ReportItem["status"]) {
   if (s === "Resolved") return "emerald";
@@ -20,8 +21,39 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [items, setItems] = useState<ReportItem[]>(initial);
+  const [submitting, setSubmitting] = useState(false);
+
+  type ReportApi = {
+    id: string;
+    title: string;
+    category: ReportItem["category"];
+    priority: ReportItem["priority"];
+    status: ReportItem["status"];
+    createdAt: string;
+  };
 
   const canCreate = useMemo(() => title.trim().length >= 6, [title]);
+
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const response = await apiGet<ReportApi[]>("/api/v1/reports");
+        const mapped =
+          response.data?.map((report) => ({
+            id: report.id,
+            title: report.title,
+            category: report.category,
+            priority: report.priority,
+            status: report.status,
+            createdISO: report.createdAt
+          })) ?? [];
+        setItems(mapped);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    loadReports();
+  }, []);
 
   return (
     <>
@@ -56,7 +88,7 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
             ))}
           </div>
           <div className="mt-3 text-xs text-slate-500">
-            Next: attach images + connect API endpoints to persist reports.
+            Attachments are coming soon.
           </div>
         </CardBody>
       </Card>
@@ -97,19 +129,34 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
             <Button
               type="button"
               className="flex-1"
-              disabled={!canCreate}
-              onClick={() => {
-                const next: ReportItem = {
-                  id: `rp_${Date.now()}`,
-                  title: title.trim(),
-                  category: "Other",
-                  createdISO: new Date().toISOString(),
-                  status: "Open",
-                  priority: "Medium",
-                };
-                setItems([next, ...items]);
-                setTitle("");
-                setOpen(false);
+              disabled={!canCreate || submitting}
+              onClick={async () => {
+                if (!canCreate || submitting) return;
+                setSubmitting(true);
+                try {
+                  const response = await apiPost<ReportApi>("/api/v1/reports", {
+                    title: title.trim(),
+                    category: "Other",
+                    priority: "Medium"
+                  });
+                  if (response.data) {
+                    const next: ReportItem = {
+                      id: response.data.id,
+                      title: response.data.title,
+                      category: response.data.category,
+                      createdISO: response.data.createdAt,
+                      status: response.data.status,
+                      priority: response.data.priority
+                    };
+                    setItems((prev) => [next, ...prev]);
+                  }
+                  setTitle("");
+                  setOpen(false);
+                } catch (error) {
+                  console.error(error);
+                } finally {
+                  setSubmitting(false);
+                }
               }}
             >
               Create report

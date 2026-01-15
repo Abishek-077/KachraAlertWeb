@@ -1,7 +1,10 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Bell, BadgeCheck } from "lucide-react";
 
-import { alerts, reports, scheduleToday, weeklyPickups, invoices } from "../../../lib/demo-data";
+import { scheduleToday, weeklyPickups } from "../../../lib/demo-data";
 import AlertsPanel from "../_components/AlertsPanel";
 import WeeklyPickupsChart from "../_components/Charts";
 import NextCollectionCard from "../_components/NextCollectionCard";
@@ -10,9 +13,57 @@ import TodaySchedule from "../_components/TodaySchedule";
 import Card, { CardBody, CardHeader } from "../_components/Card";
 import Badge from "../_components/Badge";
 import Button from "../_components/Button";
+import { apiGet } from "@/app/lib/api";
+import type { ReportItem, InvoiceItem } from "../../../lib/types";
+import { useAlerts } from "@/app/lib/alerts-context";
 
 export default function DashboardPage() {
-  const dueInvoice = invoices.find((i) => i.status !== "Paid");
+  const { unreadCount } = useAlerts();
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+
+  type ReportApi = ReportItem & { createdAt: string };
+  type InvoiceApi = InvoiceItem & { issuedAt: string };
+
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const response = await apiGet<ReportApi[]>("/api/v1/reports");
+        const mapped =
+          response.data?.map((report) => ({
+            id: report.id,
+            title: report.title,
+            category: report.category,
+            priority: report.priority,
+            status: report.status,
+            createdISO: report.createdAt
+          })) ?? [];
+        setReports(mapped);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const loadInvoices = async () => {
+      try {
+        const response = await apiGet<InvoiceApi[]>("/api/v1/invoices");
+        const mapped =
+          response.data?.map((inv) => ({
+            id: inv.id,
+            period: inv.period,
+            amountNPR: inv.amountNPR,
+            status: inv.status,
+            issuedISO: inv.issuedAt
+          })) ?? [];
+        setInvoices(mapped);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    loadReports();
+    loadInvoices();
+  }, []);
+
+  const dueInvoice = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
   return (
     <div className="space-y-6">
@@ -40,7 +91,7 @@ export default function DashboardPage() {
           icon={<CreditCard size={18} />}
           hint={dueInvoice ? `${dueInvoice.period} • NPR ${dueInvoice.amountNPR}` : "All clear"}
         />
-        <StatCard title="Unread alerts" value={String(alerts.filter((a) => !a.read).length)} icon={<Bell size={18} />} hint="Tap bell to view" />
+        <StatCard title="Unread alerts" value={String(unreadCount)} icon={<Bell size={18} />} hint="Tap bell to view" />
         <StatCard title="Complaints resolved" value="8" icon={<BadgeCheck size={18} />} hint="Last 30 days" />
       </div>
 
@@ -81,7 +132,7 @@ export default function DashboardPage() {
           </Card>
         </div>
         <div>
-          <AlertsPanel items={alerts} />
+          <AlertsPanel />
         </div>
       </div>
     </div>

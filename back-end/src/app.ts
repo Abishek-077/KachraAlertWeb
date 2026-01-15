@@ -4,6 +4,10 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import authRoutes from "./routes/authRoutes.js";
+import alertRoutes from "./routes/alertsRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import invoiceRoutes from "./routes/invoiceRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import { errorHandler } from "./middleware/error.js";
 import { env } from "./config/env.js";
 
@@ -25,6 +29,10 @@ app.get("/api/v1/health", (_req, res) => {
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/alerts", alertRoutes);
+app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/invoices", invoiceRoutes);
+app.use("/api/v1/users", userRoutes);
 
 app.use(errorHandler);
 
