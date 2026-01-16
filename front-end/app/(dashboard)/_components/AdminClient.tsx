@@ -7,6 +7,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import Badge from "./Badge";
+import { apiPost } from "@/app/lib/api";
 
 type QueueItem = {
   id: string;
@@ -18,6 +19,8 @@ type QueueItem = {
 
 export default function AdminClient() {
   const [msg, setMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([
     { id: "q_1", area: "Ward 10", route: "Route A", eta: "5:10 PM", status: "Queued" },
     { id: "q_2", area: "Ward 11", route: "Route B", eta: "5:35 PM", status: "In Progress" },
@@ -116,17 +119,29 @@ export default function AdminClient() {
                   placeholder="e.g., Collection delayed by 30 minutes"
                 />
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!msg.trim()) return;
-                    console.log(`Broadcast sent: ${msg.trim()}`);
-                    setMsg("");
+                    setSending(true);
+                    setNotice(null);
+                    try {
+                      await apiPost("/api/v1/alerts/broadcast", {
+                        title: msg.trim(),
+                        body: msg.trim(),
+                        severity: "info"
+                      });
+                      setMsg("");
+                      setNotice("Broadcast sent.");
+                    } catch (error) {
+                      setNotice((error as Error).message ?? "Failed to broadcast.");
+                    } finally {
+                      setSending(false);
+                    }
                   }}
+                  disabled={sending || !msg.trim()}
                 >
                   <Megaphone size={16} /> Send
                 </Button>
-                <div className="text-xs text-slate-500">
-                  Next: connect to your admin alert API + push notifications.
-                </div>
+                {notice ? <div className="text-xs text-slate-500">{notice}</div> : null}
               </div>
             </CardBody>
           </Card>

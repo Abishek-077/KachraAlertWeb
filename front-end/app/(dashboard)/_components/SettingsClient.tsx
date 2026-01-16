@@ -1,17 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Home, User2, ShieldCheck } from "lucide-react";
 
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
-import Badge from "./Badge";
+import { apiPatch } from "@/app/lib/api";
+import { useAuth } from "@/app/lib/auth-context";
 
 type Tab = "profile" | "address" | "notifications" | "security";
 
 export default function SettingsClient() {
   const [tab, setTab] = useState<Tab>("profile");
+  const { user, refresh } = useAuth();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    society: "",
+    building: "",
+    apartment: ""
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      society: user.society,
+      building: user.building,
+      apartment: user.apartment
+    });
+  }, [user]);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try {
+      await apiPatch("/api/v1/users/me", {
+        name: form.name,
+        phone: form.phone
+      });
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveAddress = async () => {
+    setSaving(true);
+    try {
+      await apiPatch("/api/v1/users/me", {
+        society: form.society,
+        building: form.building,
+        apartment: form.apartment
+      });
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -50,26 +100,27 @@ export default function SettingsClient() {
       <Card className="lg:col-span-2">
         <CardHeader
           title={tab === "profile" ? "Profile" : tab === "address" ? "Address" : tab === "notifications" ? "Notifications" : "Security"}
-          subtitle="These settings are local demo state for now"
-          right={<Badge tone="blue">Demo</Badge>}
+          subtitle="Update your profile details"
         />
         <CardBody>
           {tab === "profile" ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Full name</div>
-                <Input defaultValue="Rajesh Shrestha" />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Email</div>
-                <Input defaultValue="rajesh@example.com" />
+                <Input value={form.email} disabled />
               </div>
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Phone</div>
-                <Input defaultValue="+977 98XXXXXXXX" />
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
               <div className="flex items-end">
-                <Button onClick={() => console.log("Saved")}>Save changes</Button>
+                <Button onClick={() => void saveProfile()} disabled={saving}>
+                  {saving ? "Saving..." : "Save changes"}
+                </Button>
               </div>
             </div>
           ) : null}
@@ -78,18 +129,20 @@ export default function SettingsClient() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Society</div>
-                <Input defaultValue="Green Valley" />
+                <Input value={form.society} onChange={(e) => setForm({ ...form, society: e.target.value })} />
               </div>
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Building</div>
-                <Input defaultValue="Block A" />
+                <Input value={form.building} onChange={(e) => setForm({ ...form, building: e.target.value })} />
               </div>
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Apartment</div>
-                <Input defaultValue="A-203" />
+                <Input value={form.apartment} onChange={(e) => setForm({ ...form, apartment: e.target.value })} />
               </div>
               <div className="flex items-end">
-                <Button onClick={() => console.log("Saved")}>Save address</Button>
+                <Button onClick={() => void saveAddress()} disabled={saving}>
+                  {saving ? "Saving..." : "Save address"}
+                </Button>
               </div>
             </div>
           ) : null}

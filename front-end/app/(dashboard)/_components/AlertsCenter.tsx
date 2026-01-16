@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Info, Siren, Check, Filter } from "lucide-react";
 
-import type { AlertItem } from "../../../lib/types";
 import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
+import { useAlerts } from "@/app/lib/alerts-context";
 
 function tone(sev: AlertItem["severity"]) {
   if (sev === "urgent") return "red";
@@ -21,9 +21,9 @@ function icon(sev: AlertItem["severity"]) {
   return <Info size={16} />;
 }
 
-export default function AlertsCenter({ initial }: { initial: AlertItem[] }) {
-  const [items, setItems] = useState(initial);
-  const unread = useMemo(() => items.filter((i) => !i.read).length, [items]);
+export default function AlertsCenter() {
+  const { alerts, markRead, markAllRead } = useAlerts();
+  const unread = useMemo(() => alerts.filter((i) => !i.read).length, [alerts]);
 
   return (
     <Card>
@@ -33,10 +33,7 @@ export default function AlertsCenter({ initial }: { initial: AlertItem[] }) {
         right={
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => console.log("Filters coming soon")}> <Filter size={16} /> Filter</Button>
-            <Button
-              onClick={() => setItems(items.map((i) => ({ ...i, read: true })))}
-              disabled={unread === 0}
-            >
+            <Button onClick={() => void markAllRead()} disabled={unread === 0}>
               <Check size={16} /> Mark all read
             </Button>
           </div>
@@ -44,7 +41,7 @@ export default function AlertsCenter({ initial }: { initial: AlertItem[] }) {
       />
       <CardBody>
         <div className="space-y-3">
-          {items.map((a) => (
+          {alerts.map((a) => (
             <div key={a.id} className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -65,7 +62,7 @@ export default function AlertsCenter({ initial }: { initial: AlertItem[] }) {
                 </div>
                 <Button
                   variant="secondary"
-                  onClick={() => setItems(items.map((i) => (i.id === a.id ? { ...i, read: true } : i)))}
+                  onClick={() => void markRead(a.id)}
                   disabled={a.read}
                 >
                   <Check size={16} /> {a.read ? "Read" : "Mark read"}
