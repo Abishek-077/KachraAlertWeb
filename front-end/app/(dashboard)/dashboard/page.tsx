@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Bell, BadgeCheck } from "lucide-react";
 
-import { scheduleToday, weeklyPickups } from "../../../lib/demo-data";
+import { weeklyPickups } from "../../../lib/demo-data";
 import AlertsPanel from "../_components/AlertsPanel";
 import WeeklyPickupsChart from "../_components/Charts";
 import NextCollectionCard from "../_components/NextCollectionCard";
@@ -14,16 +14,18 @@ import Card, { CardBody, CardHeader } from "../_components/Card";
 import Badge from "../_components/Badge";
 import Button from "../_components/Button";
 import { apiGet } from "@/app/lib/api";
-import type { ReportItem, InvoiceItem } from "../../../lib/types";
+import type { ReportItem, InvoiceItem, ScheduleItem } from "../../../lib/types";
 import { useAlerts } from "@/app/lib/alerts-context";
 
 export default function DashboardPage() {
   const { unreadCount } = useAlerts();
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
 
   type ReportApi = ReportItem & { createdAt: string };
   type InvoiceApi = InvoiceItem & { issuedAt: string };
+  type ScheduleApi = ScheduleItem;
 
   useEffect(() => {
     const loadReports = async () => {
@@ -59,8 +61,17 @@ export default function DashboardPage() {
         console.error(error);
       }
     };
+    const loadSchedule = async () => {
+      try {
+        const response = await apiGet<ScheduleApi[]>("/api/v1/schedules");
+        setScheduleItems(response.data ?? []);
+      } catch (error) {
+        console.error(error);
+      }
+    };
     loadReports();
     loadInvoices();
+    loadSchedule();
   }, []);
 
   const dueInvoice = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
@@ -101,7 +112,7 @@ export default function DashboardPage() {
           <WeeklyPickupsChart data={weeklyPickups} />
         </div>
         <div>
-          <TodaySchedule items={scheduleToday} />
+          <TodaySchedule items={scheduleItems.filter((item) => new Date(item.dateISO).toDateString() === new Date().toDateString())} />
         </div>
       </div>
 

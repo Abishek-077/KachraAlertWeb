@@ -9,7 +9,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import Modal from "./Modal";
-import { apiGet, apiPost } from "@/app/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/app/lib/api";
 
 function statusTone(s: ReportItem["status"]) {
   if (s === "Resolved") return "emerald";
@@ -22,6 +22,8 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
   const [title, setTitle] = useState("");
   const [items, setItems] = useState<ReportItem[]>(initial);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   type ReportApi = {
     id: string;
@@ -83,7 +85,46 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
                     </Badge>
                   </div>
                 </div>
-                <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      if (updatingId) return;
+                      const nextStatus = r.status === "Resolved" ? "Open" : "Resolved";
+                      setUpdatingId(r.id);
+                      try {
+                        await apiPatch(`/api/v1/reports/${r.id}`, { status: nextStatus });
+                        setItems((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: nextStatus } : item)));
+                      } catch (error) {
+                        console.error(error);
+                      } finally {
+                        setUpdatingId(null);
+                      }
+                    }}
+                    disabled={updatingId === r.id}
+                  >
+                    {r.status === "Resolved" ? "Reopen" : "Resolve"}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={async () => {
+                      if (deletingId) return;
+                      setDeletingId(r.id);
+                      try {
+                        await apiDelete(`/api/v1/reports/${r.id}`);
+                        setItems((prev) => prev.filter((item) => item.id !== r.id));
+                      } catch (error) {
+                        console.error(error);
+                      } finally {
+                        setDeletingId(null);
+                      }
+                    }}
+                    disabled={deletingId === r.id}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
