@@ -63,3 +63,7 @@ export function apiPatch<T>(path: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined
   });
 }
+
+export function apiDelete<T>(path: string) {
+  return request<T>(path, { method: "DELETE" });
+}
