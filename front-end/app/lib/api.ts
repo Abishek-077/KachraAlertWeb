@@ -32,10 +32,24 @@ async function request<T>(path: string, options: RequestInit = {}) {
     credentials: "include"
   });
 
-  const payload = (await response.json().catch(() => ({
-    success: false,
-    message: "Unexpected server response"
-  }))) as ApiResponse<T>;
+  const contentType = response.headers.get("content-type") ?? "";
+  let payload: ApiResponse<T> | null = null;
+
+  if (response.status !== 204 && contentType.includes("application/json")) {
+    payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
+  }
+
+  if (!payload) {
+    if (response.ok) {
+      return {
+        success: true,
+        message: "",
+        data: undefined
+      } as ApiResponse<T>;
+    }
+    const error = new Error(response.statusText || "Request failed") as Error & { errorCode?: string };
+    throw error;
+  }
 
   if (!response.ok || !payload.success) {
     const error = new Error(payload.message ?? "Request failed") as Error & { errorCode?: string };
