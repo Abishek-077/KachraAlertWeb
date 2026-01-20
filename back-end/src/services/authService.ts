@@ -9,7 +9,6 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/
 import { v4 as uuidv4 } from "uuid";
 
 const PASSWORD_SALT_ROUNDS = 12;
-
 function getRefreshExpiry(remember?: boolean) {
   const days = remember ? env.refreshTokenRememberDays : env.refreshTokenDays;
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);

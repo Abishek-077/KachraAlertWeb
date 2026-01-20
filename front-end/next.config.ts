@@ -1,7 +1,21 @@
-import type { NextConfig } from "next";
+// import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  reactStrictMode: true
+// const nextConfig: NextConfig = {
+//   reactStrictMode: true
+// };
+
+// export default nextConfig;
+
+// /** @type {import('next').NextConfig} */
+const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: "http://localhost:4000/api/v1/:path*",
+      },
+    ];
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
