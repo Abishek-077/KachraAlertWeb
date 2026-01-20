@@ -5,6 +5,11 @@ export type ApiResponse<T> = {
   errorCode?: string;
 };
 
+export type ApiError = Error & {
+  status?: number;
+  errorCode?: string;
+};
+
 export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 let accessToken: string | null = null;
@@ -47,13 +52,15 @@ async function request<T>(path: string, options: RequestInit = {}) {
         data: undefined
       } as ApiResponse<T>;
     }
-    const error = new Error(response.statusText || "Request failed") as Error & { errorCode?: string };
+    const error = new Error(response.statusText || "Request failed") as ApiError;
+    error.status = response.status;
     throw error;
   }
 
   if (!response.ok || !payload.success) {
-    const error = new Error(payload.message ?? "Request failed") as Error & { errorCode?: string };
+    const error = new Error(payload.message ?? "Request failed") as ApiError;
     error.errorCode = payload.errorCode;
+    error.status = response.status;
     throw error;
   }
 

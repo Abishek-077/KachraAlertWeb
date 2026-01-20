@@ -13,7 +13,7 @@ import TodaySchedule from "../_components/TodaySchedule";
 import Card, { CardBody, CardHeader } from "../_components/Card";
 import Badge from "../_components/Badge";
 import Button from "../_components/Button";
-import { apiGet } from "@/app/lib/api";
+import { apiGet, type ApiError } from "@/app/lib/api";
 import type { ReportItem, InvoiceItem, ScheduleItem } from "../../../lib/types";
 import { useAlerts } from "@/app/lib/alerts-context";
 
@@ -28,6 +28,8 @@ export default function DashboardPage() {
   type ScheduleApi = ScheduleItem;
 
   useEffect(() => {
+    const isNotFound = (error: unknown) => (error as ApiError | undefined)?.status === 404;
+
     const loadReports = async () => {
       try {
         const response = await apiGet<ReportApi[]>("/api/v1/reports");
@@ -66,6 +68,10 @@ export default function DashboardPage() {
         const response = await apiGet<ScheduleApi[]>("/api/v1/schedules");
         setScheduleItems(response.data ?? []);
       } catch (error) {
+        if (isNotFound(error)) {
+          setScheduleItems([]);
+          return;
+        }
         console.error(error);
       }
     };

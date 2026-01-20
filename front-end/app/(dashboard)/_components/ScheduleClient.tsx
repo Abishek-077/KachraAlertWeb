@@ -9,7 +9,7 @@ import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/app/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost, type ApiError } from "@/app/lib/api";
 
 type ScheduleApi = {
   id: string;
@@ -37,8 +37,11 @@ export default function ScheduleClient() {
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [scheduleUnavailable, setScheduleUnavailable] = useState(false);
 
   useEffect(() => {
+    const isNotFound = (error: unknown) => (error as ApiError | undefined)?.status === 404;
+
     const loadSchedule = async () => {
       try {
         const response = await apiGet<ScheduleApi[]>("/api/v1/schedules");
@@ -52,6 +55,11 @@ export default function ScheduleClient() {
           })) ?? [];
         setItems(mapped);
       } catch (error) {
+        if (isNotFound(error)) {
+          setItems([]);
+          setScheduleUnavailable(true);
+          return;
+        }
         console.error(error);
       }
     };
@@ -77,7 +85,7 @@ export default function ScheduleClient() {
   const todayKey = format(new Date(), "yyyy-MM-dd");
   const todaysItems = grouped.get(todayKey) ?? [];
 
-  const canSubmit = date && time && !submitting;
+  const canSubmit = date && time && !submitting && !scheduleUnavailable;
 
   return (
     <div className="space-y-6">
@@ -97,6 +105,11 @@ export default function ScheduleClient() {
           }
         />
         <CardBody>
+          {scheduleUnavailable ? (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              The schedules API is not available yet. Configure the backend to enable schedule updates.
+            </div>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
             {days.map((d) => {
               const dayKey = format(d, "yyyy-MM-dd");
@@ -163,6 +176,7 @@ export default function ScheduleClient() {
           <div className="mt-3">
             <Button
               onClick={async () => {
+                if (scheduleUnavailable) return;
                 if (!canSubmit) return;
                 setSubmitting(true);
                 try {
@@ -191,6 +205,10 @@ export default function ScheduleClient() {
                   setWaste("Biodegradable");
                   setStatus("Upcoming");
                 } catch (error) {
+                  if ((error as ApiError | undefined)?.status === 404) {
+                    setScheduleUnavailable(true);
+                    return;
+                  }
                   console.error(error);
                 } finally {
                   setSubmitting(false);
@@ -222,6 +240,7 @@ export default function ScheduleClient() {
                   <Button
                     variant="secondary"
                     onClick={async () => {
+                      if (scheduleUnavailable) return;
                       if (updatingId) return;
                       setUpdatingId(item.id);
                       try {
@@ -231,30 +250,39 @@ export default function ScheduleClient() {
                           prev.map((entry) => (entry.id === item.id ? { ...entry, status: nextStatus } : entry))
                         );
                       } catch (error) {
+                        if ((error as ApiError | undefined)?.status === 404) {
+                          setScheduleUnavailable(true);
+                          return;
+                        }
                         console.error(error);
                       } finally {
                         setUpdatingId(null);
                       }
                     }}
-                    disabled={updatingId === item.id}
+                    disabled={updatingId === item.id || scheduleUnavailable}
                   >
                     {item.status === "Completed" ? "Undo" : "Complete"}
                   </Button>
                   <Button
                     variant="danger"
                     onClick={async () => {
+                      if (scheduleUnavailable) return;
                       if (deletingId) return;
                       setDeletingId(item.id);
                       try {
                         await apiDelete(`/api/v1/schedules/${item.id}`);
                         setItems((prev) => prev.filter((entry) => entry.id !== item.id));
                       } catch (error) {
+                        if ((error as ApiError | undefined)?.status === 404) {
+                          setScheduleUnavailable(true);
+                          return;
+                        }
                         console.error(error);
                       } finally {
                         setDeletingId(null);
                       }
                     }}
-                    disabled={deletingId === item.id}
+                    disabled={deletingId === item.id || scheduleUnavailable}
                   >
                     Remove
                   </Button>

@@ -58,6 +58,7 @@ export default function LoginForm() {
                         <input
                             className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-500"
                             placeholder="you@example.com"
+                            autoComplete="email"
                             {...register("email")}
                         />
                         {errors.email && (
@@ -73,6 +74,7 @@ export default function LoginForm() {
                                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-500"
                                 placeholder="Enter your password"
                                 type={show ? "text" : "password"}
+                                autoComplete="current-password"
                                 {...register("password")}
                             />
                             <button
