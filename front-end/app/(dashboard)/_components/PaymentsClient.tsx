@@ -44,10 +44,10 @@ export default function PaymentsClient() {
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
-  const handlePay = async (invoiceId: string) => {
+  const handlePay = async (invoiceId: string, amountNPR: number) => {
     setPayingId(invoiceId);
     try {
-      const response = await apiPost<InvoiceApi>(`/api/v1/invoices/${invoiceId}/pay`);
+      const response = await apiPost<InvoiceApi>(`/api/v1/invoices/${invoiceId}/pay`, { amountNPR });
       if (response.data) {
         setInvoices((prev) =>
           prev.map((inv) =>
@@ -78,7 +78,7 @@ export default function PaymentsClient() {
               disabled={!due || payingId !== null}
               onClick={() => {
                 if (!due) return;
-                void handlePay(due.id);
+                void handlePay(due.id, due.amountNPR);
               }}
             >
               {payingId && due?.id === payingId ? "Paying..." : "Pay now"}
@@ -160,7 +160,7 @@ export default function PaymentsClient() {
                       ) : (
                         <Button
                           disabled={payingId === inv.id}
-                          onClick={() => void handlePay(inv.id)}
+                          onClick={() => void handlePay(inv.id, inv.amountNPR)}
                         >
                           {payingId === inv.id ? "Paying..." : "Pay"}
                         </Button>
