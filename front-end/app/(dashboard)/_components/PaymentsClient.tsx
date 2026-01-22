@@ -85,6 +85,8 @@ export default function PaymentsClient() {
   }, [invoicesPath, isDemoMode]);
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
+  const dueDraftAmount =
+    due && Number.isFinite(draftAmounts[due.id]) ? draftAmounts[due.id] : due?.amountNPR;
 
   const markInvoicePaidOptimistic = (invoiceId: string) => {
     setInvoices((prev) =>
@@ -181,7 +183,8 @@ export default function PaymentsClient() {
               disabled={!due || payingId !== null}
               onClick={() => {
                 if (!due) return;
-                void handlePay(due.id, due.amountNPR);
+                const amount = dueDraftAmount ?? due.amountNPR;
+                void handlePay(due.id, amount);
               }}
             >
               {payingId && due?.id === payingId ? "Paying..." : "Pay now"}
@@ -216,7 +219,7 @@ export default function PaymentsClient() {
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Amount due</div>
                   <div className="mt-1 text-2xl font-extrabold">
-                    {due ? `NPR ${due.amountNPR}` : "NPR 0"}
+                    {due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}
                   </div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
@@ -257,7 +260,7 @@ export default function PaymentsClient() {
               </thead>
               <tbody>
                 {invoices.map((inv) => {
-                  const isEditableAmount = actualRole === "admin" && inv.status !== "Paid";
+                  const isEditableAmount = inv.status !== "Paid";
                   const draftValue = draftAmounts[inv.id] ?? inv.amountNPR;
 
                   return (
@@ -310,7 +313,7 @@ export default function PaymentsClient() {
                         ) : (
                           <Button
                             disabled={payingId === inv.id}
-                            onClick={() => void handlePay(inv.id, inv.amountNPR)}
+                            onClick={() => void handlePay(inv.id, draftValue)}
                           >
                             {payingId === inv.id ? "Paying..." : "Pay"}
                           </Button>
