@@ -73,7 +73,17 @@ export default function PaymentsClient() {
         <CardHeader
           title="Payments"
           subtitle="View your monthly fees and invoices"
-          right={<Button disabled={!due}>Pay now</Button>}
+          right={
+            <Button
+              disabled={!due || payingId !== null}
+              onClick={() => {
+                if (!due) return;
+                void handlePay(due.id);
+              }}
+            >
+              {payingId && due?.id === payingId ? "Paying..." : "Pay now"}
+            </Button>
+          }
         />
         <CardBody>
           <div className="grid gap-4 md:grid-cols-3">

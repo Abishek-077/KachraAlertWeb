@@ -9,7 +9,7 @@ import Input from "./Input";
 import { useRole } from "./useRole";
 
 export default function Topbar() {
-  const { role, setRole } = useRole();
+  const { role, actualRole, setRole } = useRole();
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -25,46 +25,52 @@ export default function Topbar() {
           </div>
         </div>
 
-        <div className="relative">
-          <Button
-            variant="secondary"
-            onClick={() => setOpen((v) => !v)}
-            className="gap-2"
-            type="button"
-          >
-            {roleLabel}
-            <ChevronDown size={16} />
-          </Button>
-
-          {open ? (
-            <div
-              className="absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
-              onMouseLeave={() => setOpen(false)}
+        {actualRole === "admin" ? (
+          <div className="relative">
+            <Button
+              variant="secondary"
+              onClick={() => setOpen((v) => !v)}
+              className="gap-2"
+              type="button"
             >
-              <button
-                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => {
-                  setRole("resident");
-                  setOpen(false);
-                }}
+              {roleLabel}
+              <ChevronDown size={16} />
+            </Button>
+
+            {open ? (
+              <div
+                className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
+                onMouseLeave={() => setOpen(false)}
               >
-                Resident Mode
-              </button>
-              <button
-                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => {
-                  setRole("admin");
-                  setOpen(false);
-                }}
-              >
-                Admin / Driver Mode
-              </button>
-              <div className="px-3 pb-2 pt-2 text-xs text-slate-500">
-                Demo switch (role-based sidebar)
+                <button
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setRole("resident");
+                    setOpen(false);
+                  }}
+                >
+                  Resident Mode
+                </button>
+                <button
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setRole("admin");
+                    setOpen(false);
+                  }}
+                >
+                  Admin / Driver Mode
+                </button>
+                <div className="px-3 pb-2 pt-2 text-xs text-slate-500">
+                  Switch between admin and resident views.
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600">
+            Resident
+          </div>
+        )}
 
         <button
           className="relative rounded-xl border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
