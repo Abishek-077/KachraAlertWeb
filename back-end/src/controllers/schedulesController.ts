@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from "express";
 import { Schedule, type ScheduleDocument } from "../models/Schedule.js";
+import { User } from "../models/User.js";
 import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../utils/errors.js";
 import { getIo } from "../utils/socket.js";
@@ -17,7 +18,12 @@ function mapSchedule(schedule: ScheduleDocument) {
 
 export async function listSchedules(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const filter = req.user?.accountType === "admin_driver" ? {} : { createdBy: req.user!.id };
+    let filter: Record<string, unknown> = {};
+    if (req.user?.accountType !== "admin_driver") {
+      const adminUsers = await User.find({ accountType: "admin_driver" }).select("_id").lean();
+      const adminIds = adminUsers.map((admin) => admin._id);
+      filter = { createdBy: { $in: adminIds } };
+    }
     const schedules = await Schedule.find(filter).sort({ dateISO: 1, timeLabel: 1 });
     return sendSuccess(res, "Schedules loaded", schedules.map(mapSchedule));
   } catch (err) {

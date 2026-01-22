@@ -10,6 +10,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import { apiDelete, apiGet, apiPatch, apiPost, type ApiError } from "@/app/lib/api";
+import { useRole } from "./useRole";
 
 type ScheduleApi = {
   id: string;
@@ -29,6 +30,7 @@ const wasteOptions: WasteType[] = ["Biodegradable", "Dry Waste", "Plastic", "Gla
 const statusOptions: ScheduleItem["status"][] = ["Upcoming", "Completed", "Missed"];
 
 export default function ScheduleClient() {
+  const { role } = useRole();
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -85,7 +87,7 @@ export default function ScheduleClient() {
   const todayKey = format(new Date(), "yyyy-MM-dd");
   const todaysItems = grouped.get(todayKey) ?? [];
 
-  const canSubmit = date && time && !submitting && !scheduleUnavailable;
+  const canSubmit = role === "admin" && date && time && !submitting && !scheduleUnavailable;
 
   return (
     <div className="space-y-6">
@@ -147,79 +149,87 @@ export default function ScheduleClient() {
       <Card>
         <CardHeader title="Add schedule" subtitle="Create or adjust pickup entries" />
         <CardBody>
-          <div className="grid gap-3 md:grid-cols-4">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            <select
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-emerald-500/20"
-              value={waste}
-              onChange={(e) => setWaste(e.target.value as WasteType)}
-            >
-              {wasteOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <select
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-emerald-500/20"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ScheduleItem["status"])}
-            >
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mt-3">
-            <Button
-              onClick={async () => {
-                if (scheduleUnavailable) return;
-                if (!canSubmit) return;
-                setSubmitting(true);
-                try {
-                  const dateValue = new Date(`${date}T${time}`);
-                  const payload = {
-                    dateISO: dateValue.toISOString(),
-                    timeLabel: format(dateValue, "p"),
-                    waste,
-                    status
-                  };
-                  const response = await apiPost<ScheduleApi>("/api/v1/schedules", payload);
-                  const createdSchedule = response.data;
-                  if (createdSchedule) {
-                    setItems((prev) => [
-                      {
-                        id: createdSchedule.id,
-                        dateISO: createdSchedule.dateISO,
-                        timeLabel: createdSchedule.timeLabel,
-                        waste: createdSchedule.waste,
-                        status: createdSchedule.status
-                      },
-                      ...prev
-                    ]);
-                  }
-                  setDate("");
-                  setTime("");
-                  setWaste("Biodegradable");
-                  setStatus("Upcoming");
-                } catch (error) {
-                  if ((error as ApiError | undefined)?.status === 404) {
-                    setScheduleUnavailable(true);
-                    return;
-                  }
-                  console.error(error);
-                } finally {
-                  setSubmitting(false);
-                }
-              }}
-              disabled={!canSubmit}
-            >
-              Add schedule
-            </Button>
-          </div>
+          {role !== "admin" ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
+              Only admins can create or update schedules. Residents can view the collection plan created by admins.
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-4">
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-emerald-500/20"
+                  value={waste}
+                  onChange={(e) => setWaste(e.target.value as WasteType)}
+                >
+                  {wasteOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-emerald-500/20"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as ScheduleItem["status"])}
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3">
+                <Button
+                  onClick={async () => {
+                    if (scheduleUnavailable) return;
+                    if (!canSubmit) return;
+                    setSubmitting(true);
+                    try {
+                      const dateValue = new Date(`${date}T${time}`);
+                      const payload = {
+                        dateISO: dateValue.toISOString(),
+                        timeLabel: format(dateValue, "p"),
+                        waste,
+                        status
+                      };
+                      const response = await apiPost<ScheduleApi>("/api/v1/schedules", payload);
+                      const createdSchedule = response.data;
+                      if (createdSchedule) {
+                        setItems((prev) => [
+                          {
+                            id: createdSchedule.id,
+                            dateISO: createdSchedule.dateISO,
+                            timeLabel: createdSchedule.timeLabel,
+                            waste: createdSchedule.waste,
+                            status: createdSchedule.status
+                          },
+                          ...prev
+                        ]);
+                      }
+                      setDate("");
+                      setTime("");
+                      setWaste("Biodegradable");
+                      setStatus("Upcoming");
+                    } catch (error) {
+                      if ((error as ApiError | undefined)?.status === 404) {
+                        setScheduleUnavailable(true);
+                        return;
+                      }
+                      console.error(error);
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                  disabled={!canSubmit}
+                >
+                  Add schedule
+                </Button>
+              </div>
+            </>
+          )}
         </CardBody>
       </Card>
 
@@ -238,55 +248,59 @@ export default function ScheduleClient() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone[item.status]}>{item.status}</Badge>
-                  <Button
-                    variant="secondary"
-                    onClick={async () => {
-                      if (scheduleUnavailable) return;
-                      if (updatingId) return;
-                      setUpdatingId(item.id);
-                      try {
-                        const nextStatus = item.status === "Completed" ? "Upcoming" : "Completed";
-                        await apiPatch(`/api/v1/schedules/${item.id}`, { status: nextStatus });
-                        setItems((prev) =>
-                          prev.map((entry) => (entry.id === item.id ? { ...entry, status: nextStatus } : entry))
-                        );
-                      } catch (error) {
-                        if ((error as ApiError | undefined)?.status === 404) {
-                          setScheduleUnavailable(true);
-                          return;
-                        }
-                        console.error(error);
-                      } finally {
-                        setUpdatingId(null);
-                      }
-                    }}
-                    disabled={updatingId === item.id || scheduleUnavailable}
-                  >
-                    {item.status === "Completed" ? "Undo" : "Complete"}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={async () => {
-                      if (scheduleUnavailable) return;
-                      if (deletingId) return;
-                      setDeletingId(item.id);
-                      try {
-                        await apiDelete(`/api/v1/schedules/${item.id}`);
-                        setItems((prev) => prev.filter((entry) => entry.id !== item.id));
-                      } catch (error) {
-                        if ((error as ApiError | undefined)?.status === 404) {
-                          setScheduleUnavailable(true);
-                          return;
-                        }
-                        console.error(error);
-                      } finally {
-                        setDeletingId(null);
-                      }
-                    }}
-                    disabled={deletingId === item.id || scheduleUnavailable}
-                  >
-                    Remove
-                  </Button>
+                  {role === "admin" ? (
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={async () => {
+                          if (scheduleUnavailable) return;
+                          if (updatingId) return;
+                          setUpdatingId(item.id);
+                          try {
+                            const nextStatus = item.status === "Completed" ? "Upcoming" : "Completed";
+                            await apiPatch(`/api/v1/schedules/${item.id}`, { status: nextStatus });
+                            setItems((prev) =>
+                              prev.map((entry) => (entry.id === item.id ? { ...entry, status: nextStatus } : entry))
+                            );
+                          } catch (error) {
+                            if ((error as ApiError | undefined)?.status === 404) {
+                              setScheduleUnavailable(true);
+                              return;
+                            }
+                            console.error(error);
+                          } finally {
+                            setUpdatingId(null);
+                          }
+                        }}
+                        disabled={updatingId === item.id || scheduleUnavailable}
+                      >
+                        {item.status === "Completed" ? "Undo" : "Complete"}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={async () => {
+                          if (scheduleUnavailable) return;
+                          if (deletingId) return;
+                          setDeletingId(item.id);
+                          try {
+                            await apiDelete(`/api/v1/schedules/${item.id}`);
+                            setItems((prev) => prev.filter((entry) => entry.id !== item.id));
+                          } catch (error) {
+                            if ((error as ApiError | undefined)?.status === 404) {
+                              setScheduleUnavailable(true);
+                              return;
+                            }
+                            console.error(error);
+                          } finally {
+                            setDeletingId(null);
+                          }
+                        }}
+                        disabled={deletingId === item.id || scheduleUnavailable}
+                      >
+                        Remove
+                      </Button>
+                    </>
+                  ) : null}
                 </div>
               </div>
             ))}
