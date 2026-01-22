@@ -188,14 +188,15 @@ export default function ScheduleClient() {
                     status
                   };
                   const response = await apiPost<ScheduleApi>("/api/v1/schedules", payload);
-                  if (response.data) {
+                  const createdSchedule = response.data;
+                  if (createdSchedule) {
                     setItems((prev) => [
                       {
-                        id: response.data.id,
-                        dateISO: response.data.dateISO,
-                        timeLabel: response.data.timeLabel,
-                        waste: response.data.waste,
-                        status: response.data.status
+                        id: createdSchedule.id,
+                        dateISO: createdSchedule.dateISO,
+                        timeLabel: createdSchedule.timeLabel,
+                        waste: createdSchedule.waste,
+                        status: createdSchedule.status
                       },
                       ...prev
                     ]);
