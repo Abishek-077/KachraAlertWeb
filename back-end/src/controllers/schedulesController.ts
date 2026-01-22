@@ -2,6 +2,7 @@ import type { Response, NextFunction } from "express";
 import { Schedule, type ScheduleDocument } from "../models/Schedule.js";
 import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../utils/errors.js";
+import { getIo } from "../utils/socket.js";
 import type { AuthRequest } from "../middleware/auth.js";
 
 function mapSchedule(schedule: ScheduleDocument) {
@@ -33,7 +34,9 @@ export async function createSchedule(req: AuthRequest, res: Response, next: Next
       status: req.body.status ?? "Upcoming",
       createdBy: req.user!.id
     });
-    return sendSuccess(res, "Schedule created", mapSchedule(schedule));
+    const payload = mapSchedule(schedule);
+    getIo().emit("schedules:created", payload);
+    return sendSuccess(res, "Schedule created", payload);
   } catch (err) {
     return next(err);
   }
@@ -63,7 +66,9 @@ export async function updateSchedule(req: AuthRequest, res: Response, next: Next
     }
 
     await schedule.save();
-    return sendSuccess(res, "Schedule updated", mapSchedule(schedule));
+    const payload = mapSchedule(schedule);
+    getIo().emit("schedules:updated", payload);
+    return sendSuccess(res, "Schedule updated", payload);
   } catch (err) {
     return next(err);
   }
@@ -79,6 +84,7 @@ export async function deleteSchedule(req: AuthRequest, res: Response, next: Next
       throw new AppError("Not authorized", 403, "FORBIDDEN");
     }
     await schedule.deleteOne();
+    getIo().emit("schedules:deleted", { id: schedule._id.toString() });
     return sendSuccess(res, "Schedule removed");
   } catch (err) {
     return next(err);
