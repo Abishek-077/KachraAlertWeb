@@ -6,8 +6,9 @@ import { CreditCard, Receipt, CheckCircle2 } from "lucide-react";
 import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
-import { apiGet, apiPost } from "@/app/lib/api";
+import { apiGet, apiPost, baseUrl } from "@/app/lib/api";
 import type { InvoiceItem } from "../../../lib/types";
+import { invoices as demoInvoices } from "../../../lib/demo-data";
 
 type InvoiceApi = {
   id: string;
@@ -21,6 +22,7 @@ type InvoiceApi = {
 export default function PaymentsClient() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const isDemoMode = !baseUrl;
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -37,6 +39,9 @@ export default function PaymentsClient() {
         setInvoices(mapped);
       } catch (error) {
         console.error(error);
+        if (isDemoMode) {
+          setInvoices(demoInvoices);
+        }
       }
     };
     loadInvoices();
@@ -44,24 +49,31 @@ export default function PaymentsClient() {
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
+  const markInvoicePaid = (invoiceId: string) => {
+    setInvoices((prev) =>
+      prev.map((inv) =>
+        inv.id === invoiceId
+          ? {
+              ...inv,
+              status: "Paid"
+            }
+          : inv
+      )
+    );
+  };
+
   const handlePay = async (invoiceId: string, amountNPR: number) => {
     setPayingId(invoiceId);
     try {
       const response = await apiPost<InvoiceApi>(`/api/v1/invoices/${invoiceId}/pay`, { amountNPR });
       if (response.data) {
-        setInvoices((prev) =>
-          prev.map((inv) =>
-            inv.id === invoiceId
-              ? {
-                  ...inv,
-                  status: response.data.status
-                }
-              : inv
-          )
-        );
+        setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: response.data!.status } : inv)));
       }
     } catch (error) {
       console.error(error);
+      if (isDemoMode) {
+        markInvoicePaid(invoiceId);
+      }
     } finally {
       setPayingId(null);
     }
