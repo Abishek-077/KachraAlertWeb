@@ -6,7 +6,8 @@ import { CreditCard, Receipt, CheckCircle2 } from "lucide-react";
 import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
-import { apiGet, apiPost, baseUrl } from "@/app/lib/api";
+import { apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
+import { useRole } from "./useRole";
 import type { InvoiceItem } from "../../../lib/types";
 import { invoices as demoInvoices } from "../../../lib/demo-data";
 
@@ -22,12 +23,16 @@ type InvoiceApi = {
 export default function PaymentsClient() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const { actualRole } = useRole();
   const isDemoMode = !baseUrl;
+  const invoicesPath = actualRole === "admin" ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   useEffect(() => {
     const loadInvoices = async () => {
       try {
-        const response = await apiGet<InvoiceApi[]>("/api/v1/invoices");
+        const response = await apiGet<InvoiceApi[]>(invoicesPath);
         const mapped =
           response.data?.map((inv) => ({
             id: inv.id,
@@ -37,15 +42,17 @@ export default function PaymentsClient() {
             issuedISO: inv.issuedAt
           })) ?? [];
         setInvoices(mapped);
+        setDraftAmounts(Object.fromEntries(mapped.map((inv) => [inv.id, inv.amountNPR])));
       } catch (error) {
         console.error(error);
         if (isDemoMode) {
           setInvoices(demoInvoices);
+          setDraftAmounts(Object.fromEntries(demoInvoices.map((inv) => [inv.id, inv.amountNPR])));
         }
       }
     };
     loadInvoices();
-  }, []);
+  }, [invoicesPath, isDemoMode]);
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
@@ -79,6 +86,33 @@ export default function PaymentsClient() {
     }
   };
 
+  const handleAmountChange = (invoiceId: string, nextValue: string) => {
+    const parsed = Number(nextValue);
+    setDraftAmounts((prev) => ({
+      ...prev,
+      [invoiceId]: Number.isFinite(parsed) ? parsed : prev[invoiceId]
+    }));
+  };
+
+  const handleSaveAmount = async (invoiceId: string) => {
+    const nextAmount = draftAmounts[invoiceId];
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) return;
+    setSavingId(invoiceId);
+    try {
+      const response = await apiPatch<InvoiceApi>(`/api/v1/invoices/${invoiceId}/amount`, { amountNPR: nextAmount });
+      if (response.data) {
+        setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, amountNPR: response.data!.amountNPR } : inv)));
+      }
+    } catch (error) {
+      console.error(error);
+      if (isDemoMode) {
+        setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, amountNPR: nextAmount } : inv)));
+      }
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -98,6 +132,11 @@ export default function PaymentsClient() {
           }
         />
         <CardBody>
+          {actualRole === "admin" ? (
+            <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Admin mode: you’re viewing all resident invoices and can mark payments on their behalf.
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between">
@@ -160,7 +199,29 @@ export default function PaymentsClient() {
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="border-t border-slate-200 bg-white">
                     <td className="px-4 py-3 font-semibold">{inv.period}</td>
-                    <td className="px-4 py-3">NPR {inv.amountNPR}</td>
+                    <td className="px-4 py-3">
+                      {actualRole === "admin" && inv.status !== "Paid" ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs font-semibold text-slate-500">NPR</span>
+                          <input
+                            className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                            type="number"
+                            min={1}
+                            value={draftAmounts[inv.id] ?? inv.amountNPR}
+                            onChange={(event) => handleAmountChange(inv.id, event.target.value)}
+                          />
+                          <Button
+                            variant="secondary"
+                            disabled={savingId === inv.id}
+                            onClick={() => void handleSaveAmount(inv.id)}
+                          >
+                            {savingId === inv.id ? "Saving..." : "Update"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <>NPR {inv.amountNPR}</>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <Badge tone={inv.status === "Paid" ? "emerald" : inv.status === "Overdue" ? "red" : "amber"}>
                         {inv.status}
