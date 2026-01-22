@@ -54,7 +54,8 @@ export async function createInvoice(req: AuthRequest, res: Response, next: NextF
 
 export async function payInvoice(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const invoice = await Invoice.findOne({ _id: req.params.id, userId: req.user!.id });
+    const isAdmin = req.user?.accountType === "admin_driver";
+    const invoice = await Invoice.findOne(isAdmin ? { _id: req.params.id } : { _id: req.params.id, userId: req.user!.id });
     if (!invoice) {
       throw new AppError("Invoice not found", 404, "NOT_FOUND");
     }
@@ -65,11 +66,12 @@ export async function payInvoice(req: AuthRequest, res: Response, next: NextFunc
 
     const paymentAmount = req.body.amountNPR as number;
     const provider = req.body.provider ?? "test";
+    const paymentUserId = invoice.userId;
 
     if (paymentAmount !== invoice.amountNPR) {
       await Payment.create({
         invoiceId: invoice._id,
-        userId: req.user!.id,
+        userId: paymentUserId,
         amountNPR: paymentAmount,
         provider,
         reference: `test_${Date.now()}`,
@@ -82,7 +84,7 @@ export async function payInvoice(req: AuthRequest, res: Response, next: NextFunc
     await invoice.save();
     await Payment.create({
       invoiceId: invoice._id,
-      userId: req.user!.id,
+      userId: paymentUserId,
       amountNPR: invoice.amountNPR,
       provider,
       reference: `test_${Date.now()}`,

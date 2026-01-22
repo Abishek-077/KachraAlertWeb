@@ -7,6 +7,7 @@ import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import { apiGet, apiPost, baseUrl } from "@/app/lib/api";
+import { useRole } from "./useRole";
 import type { InvoiceItem } from "../../../lib/types";
 import { invoices as demoInvoices } from "../../../lib/demo-data";
 
@@ -22,12 +23,14 @@ type InvoiceApi = {
 export default function PaymentsClient() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const { actualRole } = useRole();
   const isDemoMode = !baseUrl;
+  const invoicesPath = actualRole === "admin" ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   useEffect(() => {
     const loadInvoices = async () => {
       try {
-        const response = await apiGet<InvoiceApi[]>("/api/v1/invoices");
+        const response = await apiGet<InvoiceApi[]>(invoicesPath);
         const mapped =
           response.data?.map((inv) => ({
             id: inv.id,
@@ -45,7 +48,7 @@ export default function PaymentsClient() {
       }
     };
     loadInvoices();
-  }, []);
+  }, [invoicesPath, isDemoMode]);
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
@@ -98,6 +101,11 @@ export default function PaymentsClient() {
           }
         />
         <CardBody>
+          {actualRole === "admin" ? (
+            <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Admin mode: you’re viewing all resident invoices and can mark payments on their behalf.
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between">
