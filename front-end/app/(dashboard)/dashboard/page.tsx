@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Bell, BadgeCheck } from "lucide-react";
 
-import { weeklyPickups } from "../../../lib/demo-data";
+import { invoices as demoInvoices, weeklyPickups } from "../../../lib/demo-data";
 import AlertsPanel from "../_components/AlertsPanel";
 import WeeklyPickupsChart from "../_components/Charts";
 import NextCollectionCard from "../_components/NextCollectionCard";
@@ -13,7 +13,7 @@ import TodaySchedule from "../_components/TodaySchedule";
 import Card, { CardBody, CardHeader } from "../_components/Card";
 import Badge from "../_components/Badge";
 import Button from "../_components/Button";
-import { apiGet, type ApiError } from "@/app/lib/api";
+import { apiGet, baseUrl, type ApiError } from "@/app/lib/api";
 import type { ReportItem, InvoiceItem, ScheduleItem } from "../../../lib/types";
 import { useAlerts } from "@/app/lib/alerts-context";
 
@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
+  const isDemoMode = !baseUrl;
 
   type ReportApi = ReportItem & { createdAt: string };
   type InvoiceApi = InvoiceItem & { issuedAt: string };
@@ -61,6 +62,9 @@ export default function DashboardPage() {
         setInvoices(mapped);
       } catch (error) {
         console.error(error);
+        if (isDemoMode) {
+          setInvoices(demoInvoices);
+        }
       }
     };
     const loadSchedule = async () => {
