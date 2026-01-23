@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CreditCard, Receipt } from "lucide-react";
+import { useRole } from "./useRole";
 
 type InvoiceItem = {
   id: string;
@@ -92,12 +93,12 @@ const apiPost = async (path: string, data: any) => ({});
 const apiPatch = async (path: string, data: any) => ({});
 
 export default function PaymentsClient() {
-  // Mock role - replace with actual useRole hook
-  const actualRole = "admin_driver"; // or "resident"
-  const isAdmin = actualRole === "admin_driver" || actualRole === "admin";
+  const { role, actualRole } = useRole();
+  const isAdmin = actualRole === "admin";
+  const isViewingAsAdmin = role === "admin";
   const isDemoMode = !baseUrl;
 
-  const invoicesPath = isAdmin ? "/api/v1/invoices/all" : "/api/v1/invoices";
+  const invoicesPath = isViewingAsAdmin ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -290,7 +291,9 @@ export default function PaymentsClient() {
         <div className="p-6 space-y-6">
           {isAdmin ? (
             <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              Admin mode: you're viewing all resident invoices and can mark payments on their behalf.
+              {isViewingAsAdmin
+                ? "Admin mode: you're viewing all resident invoices and can update amounts or mark payments."
+                : "Admin access: you can update invoice amounts even while viewing a resident account."}
             </div>
           ) : null}
 
