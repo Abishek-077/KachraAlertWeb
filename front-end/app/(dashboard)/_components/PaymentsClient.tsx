@@ -31,11 +31,11 @@ function mapInvoice(inv: InvoiceApi): InvoiceItem {
 }
 
 export default function PaymentsClient() {
-  const { actualRole } = useRole();
+  const { accountType } = useRole();
+  const isAdmin = accountType === "admin_driver";
   const isDemoMode = !baseUrl;
 
-  const invoicesPath =
-    actualRole === "admin" ? "/api/v1/invoices/all" : "/api/v1/invoices";
+  const invoicesPath = isAdmin ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -131,6 +131,7 @@ export default function PaymentsClient() {
   };
 
   const handleSaveAmount = async (invoiceId: string) => {
+    if (!isAdmin) return;
     const nextAmount = draftAmounts[invoiceId];
 
     if (!Number.isFinite(nextAmount) || nextAmount <= 0) return;
@@ -183,7 +184,7 @@ export default function PaymentsClient() {
               disabled={!due || payingId !== null}
               onClick={() => {
                 if (!due) return;
-                const amount = dueDraftAmount ?? due.amountNPR;
+                const amount = isAdmin ? dueDraftAmount ?? due.amountNPR : due.amountNPR;
                 void handlePay(due.id, amount);
               }}
             >
@@ -192,7 +193,7 @@ export default function PaymentsClient() {
           }
         />
         <CardBody>
-          {actualRole === "admin" ? (
+          {isAdmin ? (
             <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
               Admin mode: you’re viewing all resident invoices and can mark payments on their behalf.
             </div>
@@ -219,7 +220,9 @@ export default function PaymentsClient() {
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Amount due</div>
                   <div className="mt-1 text-2xl font-extrabold">
-                    {due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}
+                    {due
+                      ? `NPR ${isAdmin ? dueDraftAmount ?? due.amountNPR : due.amountNPR}`
+                      : "NPR 0"}
                   </div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
@@ -260,8 +263,9 @@ export default function PaymentsClient() {
               </thead>
               <tbody>
                 {invoices.map((inv) => {
-                  const isEditableAmount = inv.status !== "Paid";
+                  const isEditableAmount = isAdmin && inv.status !== "Paid";
                   const draftValue = draftAmounts[inv.id] ?? inv.amountNPR;
+                  const payAmount = isAdmin ? draftValue : inv.amountNPR;
 
                   return (
                     <tr key={inv.id} className="border-t border-slate-200 bg-white">
@@ -313,7 +317,7 @@ export default function PaymentsClient() {
                         ) : (
                           <Button
                             disabled={payingId === inv.id}
-                            onClick={() => void handlePay(inv.id, draftValue)}
+                            onClick={() => void handlePay(inv.id, payAmount)}
                           >
                             {payingId === inv.id ? "Paying..." : "Pay"}
                           </Button>
