@@ -66,7 +66,7 @@ function parsePositiveAmount(value: string): number | null {
 export default function PaymentsClient() {
   const { actualRole } = useRole();
 
-  // Backend uses "admin_driver" (keep "admin" too if your UI uses it)
+  // Backend uses "admin_driver". Keep "admin" too if your UI uses it anywhere.
   const isAdmin = actualRole === "admin_driver" || actualRole === "admin";
 
   const isDemoMode = !baseUrl;
@@ -76,7 +76,7 @@ export default function PaymentsClient() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  // keep drafts as strings for editable input
+  // Keep drafts as strings for editable inputs
   const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -365,8 +365,8 @@ export default function PaymentsClient() {
                             inv.status === "Paid"
                               ? "emerald"
                               : inv.status === "Overdue"
-                                ? "red"
-                                : "amber"
+                              ? "red"
+                              : "amber"
                           }
                         >
                           {inv.status}
