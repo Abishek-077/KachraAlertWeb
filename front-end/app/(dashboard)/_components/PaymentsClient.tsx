@@ -20,6 +20,12 @@ type InvoiceApi = {
   dueAt: string;
 };
 
+type ApiEnvelope<T> = {
+  success?: boolean;
+  message?: string;
+  data?: T;
+};
+
 function mapInvoice(inv: InvoiceApi): InvoiceItem {
   return {
     id: inv.id,
@@ -30,18 +36,49 @@ function mapInvoice(inv: InvoiceApi): InvoiceItem {
   };
 }
 
+// Unwrap backend envelope safely (supports either: array directly OR {data: array})
+function unwrapList<T>(resp: any): T[] {
+  const maybe = resp?.data;
+  if (Array.isArray(maybe)) return maybe;
+  if (Array.isArray(maybe?.data)) return maybe.data;
+  return [];
+}
+
+function unwrapItem<T>(resp: any): T | null {
+  const maybe = resp?.data;
+  if (!maybe) return null;
+  // backend envelope
+  if (maybe && typeof maybe === "object" && "data" in maybe) return (maybe as ApiEnvelope<T>).data ?? null;
+  // direct
+  return maybe as T;
+}
+
+// Parse a "draft" string safely into a positive number (or null if invalid)
+function parsePositiveAmount(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
 export default function PaymentsClient() {
   const { actualRole } = useRole();
+
+  // IMPORTANT: your backend admin role is "admin_driver"
+  const isAdmin = actualRole === "admin" || actualRole === "admin_driver";
+
+  // demo mode when baseUrl is missing/empty
   const isDemoMode = !baseUrl;
 
-  const invoicesPath =
-    actualRole === "admin" ? "/api/v1/invoices/all" : "/api/v1/invoices";
+  // Correct admin endpoint
+  const invoicesPath = isAdmin ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  // Admin-only amount editing
-  const [draftAmounts, setDraftAmounts] = useState<Record<string, number>>({});
+  // IMPORTANT: keep drafts as strings so input stays editable
+  const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,16 +86,18 @@ export default function PaymentsClient() {
 
     const loadInvoices = async () => {
       try {
-        const response = await apiGet<InvoiceApi[]>(invoicesPath);
-        const mapped = (response.data ?? []).map(mapInvoice);
+        const response = await apiGet<any>(invoicesPath);
+        const list = unwrapList<InvoiceApi>(response);
+        const mapped = list.map(mapInvoice);
 
         if (cancelled) return;
+
         setInvoices(mapped);
 
-        // Keep draft amounts aligned with server amounts
+        // Initialize/refresh drafts from server values
         setDraftAmounts((prev) => {
-          const next = { ...prev };
-          for (const inv of mapped) next[inv.id] = inv.amountNPR;
+          const next: Record<string, string> = { ...prev };
+          for (const inv of mapped) next[inv.id] = String(inv.amountNPR);
           return next;
         });
       } catch (error) {
@@ -68,7 +107,7 @@ export default function PaymentsClient() {
         if (isDemoMode) {
           setInvoices(demoInvoices);
           setDraftAmounts(
-            Object.fromEntries(demoInvoices.map((inv) => [inv.id, inv.amountNPR]))
+            Object.fromEntries(demoInvoices.map((inv) => [inv.id, String(inv.amountNPR)]))
           );
         } else {
           setInvoices([]);
@@ -84,9 +123,15 @@ export default function PaymentsClient() {
     };
   }, [invoicesPath, isDemoMode]);
 
-  const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
-  const dueDraftAmount =
-    due && Number.isFinite(draftAmounts[due.id]) ? draftAmounts[due.id] : due?.amountNPR;
+  const due = useMemo(
+    () => invoices.find((i) => i.status !== "Paid"),
+    [invoices]
+  );
+
+  const paidCount = useMemo(
+    () => invoices.filter((i) => i.status === "Paid").length,
+    [invoices]
+  );
 
   const markInvoicePaidOptimistic = (invoiceId: string) => {
     setInvoices((prev) =>
@@ -94,20 +139,30 @@ export default function PaymentsClient() {
     );
   };
 
-  const handlePay = async (invoiceId: string, amountNPR: number) => {
+  const handlePay = async (invoiceId: string) => {
     if (payingId) return;
+
+    const inv = invoices.find((i) => i.id === invoiceId);
+    if (!inv) return;
+
+    // Admin can pay using the draft amount; residents pay the invoice amount.
+    const draft = draftAmounts[invoiceId] ?? String(inv.amountNPR);
+    const amountToPay = isAdmin ? parsePositiveAmount(draft) : inv.amountNPR;
+
+    if (!amountToPay) return;
 
     setPayingId(invoiceId);
     try {
-      const response = await apiPost<InvoiceApi>(
-        `/api/v1/invoices/${invoiceId}/pay`,
-        { amountNPR }
-      );
+      const response = await apiPost<any>(`/api/v1/invoices/${invoiceId}/pay`, {
+        amountNPR: amountToPay,
+      });
 
-      if (response.data) {
+      const updated = unwrapItem<InvoiceApi>(response);
+
+      if (updated) {
         setInvoices((prev) =>
-          prev.map((inv) =>
-            inv.id === invoiceId ? { ...inv, status: response.data!.status } : inv
+          prev.map((row) =>
+            row.id === invoiceId ? { ...row, status: updated.status } : row
           )
         );
       } else if (isDemoMode) {
@@ -122,55 +177,56 @@ export default function PaymentsClient() {
   };
 
   const handleAmountChange = (invoiceId: string, nextValue: string) => {
-    // allow empty while typing; keep last known good number in state
-    const parsed = Number(nextValue);
-    setDraftAmounts((prev) => ({
-      ...prev,
-      [invoiceId]: Number.isFinite(parsed) ? parsed : prev[invoiceId],
-    }));
+    setDraftAmounts((prev) => ({ ...prev, [invoiceId]: nextValue }));
   };
 
   const handleSaveAmount = async (invoiceId: string) => {
-    const nextAmount = draftAmounts[invoiceId];
-
-    if (!Number.isFinite(nextAmount) || nextAmount <= 0) return;
     if (savingId) return;
+
+    const inv = invoices.find((i) => i.id === invoiceId);
+    if (!inv) return;
+
+    const draft = draftAmounts[invoiceId] ?? String(inv.amountNPR);
+    const nextAmount = parsePositiveAmount(draft);
+    if (!nextAmount) return;
+
+    if (nextAmount === inv.amountNPR) return;
 
     setSavingId(invoiceId);
     try {
-      const response = await apiPatch<InvoiceApi>(
-        `/api/v1/invoices/${invoiceId}/amount`,
-        { amountNPR: nextAmount }
-      );
+      const response = await apiPatch<any>(`/api/v1/invoices/${invoiceId}/amount`, {
+        amountNPR: nextAmount,
+      });
 
-      if (response.data) {
+      const updated = unwrapItem<InvoiceApi>(response);
+
+      if (updated) {
         setInvoices((prev) =>
-          prev.map((inv) =>
-            inv.id === invoiceId ? { ...inv, amountNPR: response.data!.amountNPR } : inv
+          prev.map((row) =>
+            row.id === invoiceId ? { ...row, amountNPR: updated.amountNPR } : row
           )
         );
-        setDraftAmounts((prev) => ({ ...prev, [invoiceId]: response.data!.amountNPR }));
+        setDraftAmounts((prev) => ({ ...prev, [invoiceId]: String(updated.amountNPR) }));
       } else if (isDemoMode) {
         setInvoices((prev) =>
-          prev.map((inv) => (inv.id === invoiceId ? { ...inv, amountNPR: nextAmount } : inv))
+          prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: nextAmount } : row))
         );
+        setDraftAmounts((prev) => ({ ...prev, [invoiceId]: String(nextAmount) }));
       }
     } catch (error) {
       console.error(error);
       if (isDemoMode) {
         setInvoices((prev) =>
-          prev.map((inv) => (inv.id === invoiceId ? { ...inv, amountNPR: nextAmount } : inv))
+          prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: nextAmount } : row))
         );
+        setDraftAmounts((prev) => ({ ...prev, [invoiceId]: String(nextAmount) }));
       }
     } finally {
       setSavingId(null);
     }
   };
 
-  const paidCount = useMemo(
-    () => invoices.filter((i) => i.status === "Paid").length,
-    [invoices]
-  );
+  const payNowDisabled = !due || payingId !== null;
 
   return (
     <div className="space-y-6">
@@ -180,11 +236,12 @@ export default function PaymentsClient() {
           subtitle="View your monthly fees and invoices"
           right={
             <Button
-              disabled={!due || payingId !== null}
-              onClick={() => {
+              type="button"
+              disabled={payNowDisabled}
+              onClick={(e: any) => {
+                e?.preventDefault?.();
                 if (!due) return;
-                const amount = dueDraftAmount ?? due.amountNPR;
-                void handlePay(due.id, amount);
+                void handlePay(due.id);
               }}
             >
               {payingId && due?.id === payingId ? "Paying..." : "Pay now"}
@@ -192,7 +249,7 @@ export default function PaymentsClient() {
           }
         />
         <CardBody>
-          {actualRole === "admin" ? (
+          {isAdmin ? (
             <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
               Admin mode: you’re viewing all resident invoices and can mark payments on their behalf.
             </div>
@@ -219,7 +276,7 @@ export default function PaymentsClient() {
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Amount due</div>
                   <div className="mt-1 text-2xl font-extrabold">
-                    {due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}
+                    {due ? `NPR ${due.amountNPR}` : "NPR 0"}
                   </div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
@@ -258,10 +315,22 @@ export default function PaymentsClient() {
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
+
               <tbody>
                 {invoices.map((inv) => {
-                  const isEditableAmount = inv.status !== "Paid";
-                  const draftValue = draftAmounts[inv.id] ?? inv.amountNPR;
+                  const isEditableAmount = isAdmin && inv.status !== "Paid";
+                  const draftValue = draftAmounts[inv.id] ?? String(inv.amountNPR);
+                  const parsedDraft = parsePositiveAmount(draftValue);
+
+                  const canSave =
+                    isEditableAmount &&
+                    savingId !== inv.id &&
+                    parsedDraft !== null &&
+                    parsedDraft !== inv.amountNPR;
+
+                  // Admin "Pay" uses draft amount; normal users use invoice amount.
+                  const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
+                  const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
 
                   return (
                     <tr key={inv.id} className="border-t border-slate-200 bg-white">
@@ -272,16 +341,20 @@ export default function PaymentsClient() {
                           <div className="flex items-center justify-end gap-2">
                             <span className="text-xs font-semibold text-slate-500">NPR</span>
                             <input
-                              className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm"
-                              type="number"
-                              min={1}
+                              className="w-28 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                              inputMode="numeric"
+                              type="text"
                               value={draftValue}
                               onChange={(event) => handleAmountChange(inv.id, event.target.value)}
                             />
                             <Button
+                              type="button"
                               variant="secondary"
-                              disabled={savingId === inv.id}
-                              onClick={() => void handleSaveAmount(inv.id)}
+                              disabled={!canSave}
+                              onClick={(e: any) => {
+                                e?.preventDefault?.();
+                                void handleSaveAmount(inv.id);
+                              }}
                             >
                               {savingId === inv.id ? "Saving..." : "Update"}
                             </Button>
@@ -297,8 +370,8 @@ export default function PaymentsClient() {
                             inv.status === "Paid"
                               ? "emerald"
                               : inv.status === "Overdue"
-                              ? "red"
-                              : "amber"
+                                ? "red"
+                                : "amber"
                           }
                         >
                           {inv.status}
@@ -312,8 +385,12 @@ export default function PaymentsClient() {
                           </Button>
                         ) : (
                           <Button
-                            disabled={payingId === inv.id}
-                            onClick={() => void handlePay(inv.id, draftValue)}
+                            type="button"
+                            disabled={!canPay}
+                            onClick={(e: any) => {
+                              e?.preventDefault?.();
+                              void handlePay(inv.id);
+                            }}
                           >
                             {payingId === inv.id ? "Paying..." : "Pay"}
                           </Button>
@@ -325,6 +402,12 @@ export default function PaymentsClient() {
               </tbody>
             </table>
           </div>
+
+          {!isDemoMode && invoices.length === 0 ? (
+            <div className="mt-4 text-sm text-slate-600">
+              No invoices found, or the server request failed. Check your API base URL and authentication.
+            </div>
+          ) : null}
         </CardBody>
       </Card>
     </div>
