@@ -8,7 +8,14 @@ export type AccountType = "resident" | "admin_driver";
 
 const ROLE_OVERRIDE_KEY = "ka_role_override";
 
-export function useRole() {
+export type UseRoleResult = {
+  role: UserRole;
+  actualRole: UserRole;
+  accountType: AccountType;
+  setRole: (next: UserRole) => void;
+};
+
+export function useRole(): UseRoleResult {
   const { user } = useAuth();
   const accountType: AccountType = user?.accountType ?? "resident";
   const actualRole = useMemo<UserRole>(() => {
