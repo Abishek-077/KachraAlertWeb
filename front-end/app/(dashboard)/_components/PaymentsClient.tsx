@@ -36,24 +36,25 @@ function mapInvoice(inv: InvoiceApi): InvoiceItem {
   };
 }
 
-// Unwrap backend envelope safely (supports either: array directly OR {data: array})
+// Supports either:
+// - response.data = InvoiceApi[]
+// - response.data = { success, message, data: InvoiceApi[] }
 function unwrapList<T>(resp: any): T[] {
-  const maybe = resp?.data;
-  if (Array.isArray(maybe)) return maybe;
-  if (Array.isArray(maybe?.data)) return maybe.data;
+  const payload = resp?.data;
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
   return [];
 }
 
 function unwrapItem<T>(resp: any): T | null {
-  const maybe = resp?.data;
-  if (!maybe) return null;
-  // backend envelope
-  if (maybe && typeof maybe === "object" && "data" in maybe) return (maybe as ApiEnvelope<T>).data ?? null;
-  // direct
-  return maybe as T;
+  const payload = resp?.data;
+  if (!payload) return null;
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return (payload as ApiEnvelope<T>).data ?? null;
+  }
+  return payload as T;
 }
 
-// Parse a "draft" string safely into a positive number (or null if invalid)
 function parsePositiveAmount(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -65,19 +66,17 @@ function parsePositiveAmount(value: string): number | null {
 export default function PaymentsClient() {
   const { actualRole } = useRole();
 
-  // IMPORTANT: your backend admin role is "admin_driver"
-  const isAdmin = actualRole === "admin" || actualRole === "admin_driver";
+  // Backend uses "admin_driver" (keep "admin" too if your UI uses it)
+  const isAdmin = actualRole === "admin_driver" || actualRole === "admin";
 
-  // demo mode when baseUrl is missing/empty
   const isDemoMode = !baseUrl;
 
-  // Correct admin endpoint
   const invoicesPath = isAdmin ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  // IMPORTANT: keep drafts as strings so input stays editable
+  // keep drafts as strings for editable input
   const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -123,10 +122,7 @@ export default function PaymentsClient() {
     };
   }, [invoicesPath, isDemoMode]);
 
-  const due = useMemo(
-    () => invoices.find((i) => i.status !== "Paid"),
-    [invoices]
-  );
+  const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
   const paidCount = useMemo(
     () => invoices.filter((i) => i.status === "Paid").length,
@@ -145,7 +141,6 @@ export default function PaymentsClient() {
     const inv = invoices.find((i) => i.id === invoiceId);
     if (!inv) return;
 
-    // Admin can pay using the draft amount; residents pay the invoice amount.
     const draft = draftAmounts[invoiceId] ?? String(inv.amountNPR);
     const amountToPay = isAdmin ? parsePositiveAmount(draft) : inv.amountNPR;
 
@@ -161,9 +156,7 @@ export default function PaymentsClient() {
 
       if (updated) {
         setInvoices((prev) =>
-          prev.map((row) =>
-            row.id === invoiceId ? { ...row, status: updated.status } : row
-          )
+          prev.map((row) => (row.id === invoiceId ? { ...row, status: updated.status } : row))
         );
       } else if (isDemoMode) {
         markInvoicePaidOptimistic(invoiceId);
@@ -181,6 +174,7 @@ export default function PaymentsClient() {
   };
 
   const handleSaveAmount = async (invoiceId: string) => {
+    if (!isAdmin) return;
     if (savingId) return;
 
     const inv = invoices.find((i) => i.id === invoiceId);
@@ -296,7 +290,9 @@ export default function PaymentsClient() {
                   <Receipt size={18} />
                 </div>
               </div>
-              <div className="mt-2 text-sm text-slate-600">Download invoices & receipts (coming soon).</div>
+              <div className="mt-2 text-sm text-slate-600">
+                Download invoices & receipts (coming soon).
+              </div>
             </div>
           </div>
         </CardBody>
@@ -328,7 +324,6 @@ export default function PaymentsClient() {
                     parsedDraft !== null &&
                     parsedDraft !== inv.amountNPR;
 
-                  // Admin "Pay" uses draft amount; normal users use invoice amount.
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
                   const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
 
