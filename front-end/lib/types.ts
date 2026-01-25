@@ -24,6 +24,14 @@ export type ReportItem = {
   createdISO: string;
   status: "Open" | "In Progress" | "Resolved";
   priority: "Low" | "Medium" | "High";
+  attachments?: {
+    id: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+    uploadedAt: string;
+    url: string;
+  }[];
 };
 
 export type InvoiceItem = {

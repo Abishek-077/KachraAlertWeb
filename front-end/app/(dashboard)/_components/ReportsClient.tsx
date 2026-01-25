@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Paperclip } from "lucide-react";
+import { Plus, Paperclip, X } from "lucide-react";
 
 import type { ReportItem } from "../../../lib/types";
 import Badge from "./Badge";
@@ -9,7 +9,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import Modal from "./Modal";
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/app/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
 
 function statusTone(s: ReportItem["status"]) {
   if (s === "Resolved") return "emerald";
@@ -24,6 +24,13 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<{
+    name: string;
+    mimeType: string;
+    dataBase64: string;
+  } | null>(null);
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
+  const [attachmentLoading, setAttachmentLoading] = useState(false);
 
   type ReportApi = {
     id: string;
@@ -32,6 +39,14 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
     priority: ReportItem["priority"];
     status: ReportItem["status"];
     createdAt: string;
+    attachments?: {
+      id: string;
+      originalName: string;
+      mimeType: string;
+      size: number;
+      uploadedAt: string;
+      url: string;
+    }[];
   };
 
   const canCreate = useMemo(() => title.trim().length >= 6, [title]);
@@ -47,7 +62,8 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
             category: report.category,
             priority: report.priority,
             status: report.status,
-            createdISO: report.createdAt
+            createdISO: report.createdAt,
+            attachments: report.attachments ?? []
           })) ?? [];
         setItems(mapped);
       } catch (error) {
@@ -84,6 +100,20 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
                       {r.priority}
                     </Badge>
                   </div>
+                  {r.attachments && r.attachments.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="font-semibold uppercase tracking-wide text-slate-400">Attachments</span>
+                      {r.attachments.map((attachmentItem) => (
+                        <a
+                          key={attachmentItem.id}
+                          href={`${baseUrl}${attachmentItem.url}`}
+                          className="rounded-full border border-slate-200 px-3 py-1 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                        >
+                          {attachmentItem.originalName}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone(r.status)}>{r.status}</Badge>
@@ -129,7 +159,7 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
             ))}
           </div>
           <div className="mt-3 text-xs text-slate-500">
-            Attachments are coming soon.
+            Attach a photo or file when creating a report and download it later.
           </div>
         </CardBody>
       </Card>
@@ -149,14 +179,73 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
 
           <button
             className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            onClick={() => console.log("Add attachment")}
             type="button"
+            onClick={() => {
+              const input = document.getElementById("report-attachment-input");
+              if (input instanceof HTMLInputElement) {
+                input.click();
+              }
+            }}
           >
             <span className="inline-flex items-center gap-2">
               <Paperclip size={16} /> Add photo / file
             </span>
-            <span className="text-xs text-slate-500">(coming soon)</span>
+            <span className="text-xs text-slate-500">
+              {attachmentLoading ? "Uploading..." : attachmentName ? "Attached" : "Optional"}
+            </span>
           </button>
+          <input
+            id="report-attachment-input"
+            type="file"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (!file) {
+                setAttachment(null);
+                setAttachmentName(null);
+                return;
+              }
+              setAttachmentLoading(true);
+              setAttachmentName(file.name);
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = typeof reader.result === "string" ? reader.result : "";
+                const base64 = result.includes(",") ? result.split(",")[1] : result;
+                setAttachment({
+                  name: file.name,
+                  mimeType: file.type || "application/octet-stream",
+                  dataBase64: base64
+                });
+                setAttachmentLoading(false);
+              };
+              reader.onerror = () => {
+                console.error("Failed to read attachment");
+                setAttachment(null);
+                setAttachmentName(null);
+                setAttachmentLoading(false);
+              };
+              reader.readAsDataURL(file);
+            }}
+          />
+          {attachmentName ? (
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600">
+              <span className="truncate">{attachmentName}</span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900"
+                onClick={() => {
+                  setAttachment(null);
+                  setAttachmentName(null);
+                  const input = document.getElementById("report-attachment-input");
+                  if (input instanceof HTMLInputElement) {
+                    input.value = "";
+                  }
+                }}
+              >
+                <X size={14} /> Remove
+              </button>
+            </div>
+          ) : null}
 
           <div className="flex gap-2">
             <Button
@@ -170,15 +259,16 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
             <Button
               type="button"
               className="flex-1"
-              disabled={!canCreate || submitting}
+              disabled={!canCreate || submitting || attachmentLoading}
               onClick={async () => {
-                if (!canCreate || submitting) return;
+                if (!canCreate || submitting || attachmentLoading) return;
                 setSubmitting(true);
                 try {
                   const response = await apiPost<ReportApi>("/api/v1/reports", {
                     title: title.trim(),
                     category: "Other",
-                    priority: "Medium"
+                    priority: "Medium",
+                    ...(attachment ? { attachment } : {})
                   });
                   if (response.data) {
                     const next: ReportItem = {
@@ -187,11 +277,14 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
                       category: response.data.category,
                       createdISO: response.data.createdAt,
                       status: response.data.status,
-                      priority: response.data.priority
+                      priority: response.data.priority,
+                      attachments: response.data.attachments ?? []
                     };
                     setItems((prev) => [next, ...prev]);
                   }
                   setTitle("");
+                  setAttachment(null);
+                  setAttachmentName(null);
                   setOpen(false);
                 } catch (error) {
                   console.error(error);
