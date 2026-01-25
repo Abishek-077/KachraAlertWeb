@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CreditCard, Receipt } from "lucide-react";
 import { useRole } from "./useRole";
+import { apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
 
 type InvoiceItem = {
   id: string;
@@ -85,12 +86,6 @@ function parsePositiveAmount(value: string): number | null {
   if (!Number.isFinite(n) || n <= 0) return null;
   return n;
 }
-
-// Mock API functions
-const baseUrl = "";
-const apiGet = async (path: string) => ({ data: demoInvoices });
-const apiPost = async (path: string, data: any) => ({});
-const apiPatch = async (path: string, data: any) => ({});
 
 export default function PaymentsClient() {
   const { role, actualRole } = useRole();
