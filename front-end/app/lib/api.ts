@@ -88,3 +88,21 @@ export function apiPatch<T>(path: string, body?: unknown) {
 export function apiDelete<T>(path: string) {
   return request<T>(path, { method: "DELETE" });
 }
+
+export async function apiGetBlob(path: string) {
+  const headers = new Headers();
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "GET",
+    headers,
+    credentials: "include"
+  });
+  if (!response.ok) {
+    const error = new Error(response.statusText || "Request failed") as ApiError;
+    error.status = response.status;
+    throw error;
+  }
+  return response.blob();
+}

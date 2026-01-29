@@ -14,6 +14,13 @@ const userSchema = new Schema(
     society: { type: String, required: true },
     building: { type: String, required: true },
     apartment: { type: String, required: true },
+    profileImage: {
+      filename: { type: String },
+      originalName: { type: String },
+      mimeType: { type: String },
+      size: { type: Number },
+      uploadedAt: { type: Date }
+    },
     termsAcceptedAt: { type: Date, required: true }
   },
   { timestamps: true }
