@@ -70,6 +70,7 @@ export type AuthUser = {
   society: string;
   building: string;
   apartment: string;
+  profileImageUrl?: string | null;
 };
 
 type AuthContextValue = {

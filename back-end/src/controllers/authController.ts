@@ -3,6 +3,7 @@ import { sendSuccess } from "../utils/response.js";
 import { env } from "../config/env.js";
 import * as authService from "../services/authService.js";
 import type { AuthRequest } from "../middleware/auth.js";
+import { buildProfileImageUrl } from "../utils/userProfileImage.js";
 
 function setRefreshCookie(res: Response, token: string, remember: boolean) {
   const days = remember ? env.refreshTokenRememberDays : env.refreshTokenDays;
@@ -88,7 +89,8 @@ export async function me(req: AuthRequest, res: Response, next: NextFunction) {
       phone: user.phone,
       society: user.society,
       building: user.building,
-      apartment: user.apartment
+      apartment: user.apartment,
+      profileImageUrl: user.profileImage?.filename ? buildProfileImageUrl(user._id.toString()) : null
     });
   } catch (err) {
     return next(err);

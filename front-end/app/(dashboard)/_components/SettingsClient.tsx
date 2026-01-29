@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, Home, User2, ShieldCheck } from "lucide-react";
 
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
-import { apiPatch } from "@/app/lib/api";
+import { apiGetBlob, apiPatch, apiPost } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type Tab = "profile" | "address" | "notifications" | "security";
@@ -23,6 +23,10 @@ export default function SettingsClient() {
     apartment: ""
   });
   const [saving, setSaving] = useState(false);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [profileImageUploading, setProfileImageUploading] = useState(false);
+  const previousProfileImageUrl = useRef<string | null>(null);
+  const profileImageObjectUrl = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -35,6 +39,50 @@ export default function SettingsClient() {
       apartment: user.apartment
     });
   }, [user]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadProfileImage = async () => {
+      if (!user?.profileImageUrl) {
+        if (profileImageObjectUrl.current) {
+          URL.revokeObjectURL(profileImageObjectUrl.current);
+        }
+        profileImageObjectUrl.current = null;
+        if (isActive) {
+          setProfileImagePreview(null);
+        }
+        previousProfileImageUrl.current = null;
+        return;
+      }
+      if (previousProfileImageUrl.current === user.profileImageUrl) return;
+      try {
+        const blob = await apiGetBlob(user.profileImageUrl);
+        const objectUrl = URL.createObjectURL(blob);
+        if (profileImageObjectUrl.current) {
+          URL.revokeObjectURL(profileImageObjectUrl.current);
+        }
+        profileImageObjectUrl.current = objectUrl;
+        previousProfileImageUrl.current = user.profileImageUrl;
+        if (isActive) {
+          setProfileImagePreview(objectUrl);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    void loadProfileImage();
+    return () => {
+      isActive = false;
+    };
+  }, [user?.profileImageUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (profileImageObjectUrl.current) {
+        URL.revokeObjectURL(profileImageObjectUrl.current);
+      }
+    };
+  }, []);
 
   const saveProfile = async () => {
     setSaving(true);
@@ -105,6 +153,73 @@ export default function SettingsClient() {
         <CardBody>
           {tab === "profile" ? (
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <div className="mb-2 text-sm font-semibold text-slate-700">Profile photo</div>
+                <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-400">
+                    {profileImagePreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profileImagePreview} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      "No Photo"
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      disabled={profileImageUploading}
+                      onClick={() => {
+                        const input = document.getElementById("profile-image-input");
+                        if (input instanceof HTMLInputElement) {
+                          input.click();
+                        }
+                      }}
+                    >
+                      {profileImageUploading ? "Uploading..." : "Upload photo"}
+                    </Button>
+                    <span className="text-xs text-slate-500">PNG or JPG up to 5MB.</span>
+                  </div>
+                </div>
+                <input
+                  id="profile-image-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    if (!file) return;
+                    setProfileImageUploading(true);
+                    const reader = new FileReader();
+                    reader.onload = async () => {
+                      const result = typeof reader.result === "string" ? reader.result : "";
+                      const base64 = result.includes(",") ? result.split(",")[1] : result;
+                      try {
+                        await apiPost("/api/v1/users/me/profile-image", {
+                          image: {
+                            name: file.name,
+                            mimeType: file.type || "application/octet-stream",
+                            dataBase64: base64
+                          }
+                        });
+                        await refresh();
+                      } catch (error) {
+                        console.error(error);
+                      } finally {
+                        setProfileImageUploading(false);
+                        if (event.target) {
+                          event.target.value = "";
+                        }
+                      }
+                    };
+                    reader.onerror = () => {
+                      console.error("Failed to read profile image");
+                      setProfileImageUploading(false);
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </div>
               <div>
                 <div className="mb-2 text-sm font-semibold text-slate-700">Full name</div>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

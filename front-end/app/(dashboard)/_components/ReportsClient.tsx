@@ -9,7 +9,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import Modal from "./Modal";
-import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
+import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost } from "@/app/lib/api";
 
 function statusTone(s: ReportItem["status"]) {
   if (s === "Resolved") return "emerald";
@@ -31,6 +31,7 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
   } | null>(null);
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [attachmentLoading, setAttachmentLoading] = useState(false);
+  const [attachmentFetchingId, setAttachmentFetchingId] = useState<string | null>(null);
 
   type ReportApi = {
     id: string;
@@ -73,6 +74,30 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
     loadReports();
   }, []);
 
+  const openAttachment = async (attachmentItem: NonNullable<ReportItem["attachments"]>[number]) => {
+    if (attachmentFetchingId) return;
+    setAttachmentFetchingId(attachmentItem.id);
+    try {
+      const blob = await apiGetBlob(attachmentItem.url);
+      const objectUrl = URL.createObjectURL(blob);
+      if (attachmentItem.mimeType.startsWith("image/")) {
+        window.open(objectUrl, "_blank", "noopener,noreferrer");
+      } else {
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = attachmentItem.originalName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setAttachmentFetchingId(null);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -104,13 +129,15 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                       <span className="font-semibold uppercase tracking-wide text-slate-400">Attachments</span>
                       {r.attachments.map((attachmentItem) => (
-                        <a
+                        <button
                           key={attachmentItem.id}
-                          href={`${baseUrl}${attachmentItem.url}`}
+                          type="button"
+                          onClick={() => void openAttachment(attachmentItem)}
                           className="rounded-full border border-slate-200 px-3 py-1 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          disabled={attachmentFetchingId === attachmentItem.id}
                         >
-                          {attachmentItem.originalName}
-                        </a>
+                          {attachmentFetchingId === attachmentItem.id ? "Loading..." : attachmentItem.originalName}
+                        </button>
                       ))}
                     </div>
                   ) : null}

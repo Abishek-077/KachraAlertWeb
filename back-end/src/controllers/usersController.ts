@@ -3,6 +3,9 @@ import { User, type UserDocument } from "../models/User.js";
 import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../utils/errors.js";
 import type { AuthRequest } from "../middleware/auth.js";
+import { buildProfileImageUrl, profileUploadsDir, writeProfileImage } from "../utils/userProfileImage.js";
+import fs from "fs";
+import path from "path";
 
 function mapUser(user: UserDocument) {
   return {
@@ -13,7 +16,8 @@ function mapUser(user: UserDocument) {
     phone: user.phone,
     society: user.society,
     building: user.building,
-    apartment: user.apartment
+    apartment: user.apartment,
+    profileImageUrl: user.profileImage?.filename ? buildProfileImageUrl(user._id.toString()) : null
   };
 }
 
@@ -46,6 +50,55 @@ export async function updateMe(req: AuthRequest, res: Response, next: NextFuncti
       throw new AppError("User not found", 404, "NOT_FOUND");
     }
     return sendSuccess(res, "Profile updated", mapUser(user));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function uploadProfileImage(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await User.findById(req.user!.id);
+    if (!user) {
+      throw new AppError("User not found", 404, "NOT_FOUND");
+    }
+    const imagePayload = req.body.image;
+    if (!imagePayload) {
+      throw new AppError("Profile image is required", 400, "BAD_REQUEST");
+    }
+    if (user.profileImage?.filename) {
+      const existingPath = path.join(profileUploadsDir, user.profileImage.filename);
+      if (fs.existsSync(existingPath)) {
+        fs.unlinkSync(existingPath);
+      }
+    }
+    user.profileImage = writeProfileImage(imagePayload);
+    await user.save();
+    return sendSuccess(res, "Profile image updated", mapUser(user));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function getProfileImage(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const targetId = req.params.id;
+    if (req.user!.accountType !== "admin_driver" && req.user!.id !== targetId) {
+      throw new AppError("Not authorized", 403, "FORBIDDEN");
+    }
+    const user = await User.findById(targetId);
+    if (!user) {
+      throw new AppError("User not found", 404, "NOT_FOUND");
+    }
+    if (!user.profileImage?.filename) {
+      throw new AppError("Profile image not found", 404, "NOT_FOUND");
+    }
+    const filePath = path.join(profileUploadsDir, user.profileImage.filename);
+    if (!fs.existsSync(filePath)) {
+      throw new AppError("Profile image missing", 404, "NOT_FOUND");
+    }
+    res.setHeader("Content-Type", user.profileImage.mimeType);
+    res.setHeader("Content-Disposition", `inline; filename="${user.profileImage.originalName}"`);
+    return res.sendFile(filePath);
   } catch (err) {
     return next(err);
   }
