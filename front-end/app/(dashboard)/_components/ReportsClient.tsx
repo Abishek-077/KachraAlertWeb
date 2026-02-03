@@ -79,6 +79,10 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
     setAttachmentFetchingId(attachmentItem.id);
     try {
       const blob = await apiGetBlob(attachmentItem.url);
+      if (!blob) {
+        console.warn("Attachment not found");
+        return;
+      }
       const objectUrl = URL.createObjectURL(blob);
       if (attachmentItem.mimeType.startsWith("image/")) {
         window.open(objectUrl, "_blank", "noopener,noreferrer");
