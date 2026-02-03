@@ -37,6 +37,7 @@ type AdminUserApi = {
 
 export default function AdminUsersClient() {
   const { accessToken, loading: authLoading } = useAuth();
+
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -45,6 +46,7 @@ export default function AdminUsersClient() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!accessToken) {
       setUsers([]);
       setLoading(false);
@@ -54,9 +56,11 @@ export default function AdminUsersClient() {
     const loadUsers = async () => {
       setLoading(true);
       setErrorMessage(null);
+
       try {
         const response = await apiGet<AdminUserApi[]>("/api/v1/admin/users");
-        const mapped =
+
+        const mapped: AdminUser[] =
           response.data?.map((user) => ({
             id: user.id,
             name: user.name,
@@ -65,8 +69,9 @@ export default function AdminUsersClient() {
             status: user.isBanned ? "Banned" : "Active",
             society: user.society,
             building: user.building,
-            apartment: user.apartment
+            apartment: user.apartment,
           })) ?? [];
+
         setUsers(mapped);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -82,9 +87,10 @@ export default function AdminUsersClient() {
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return users;
+
     return users.filter((user) =>
-      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some((value) =>
-        value.toLowerCase().includes(normalizedQuery),
+      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some(
+        (value) => String(value ?? "").toLowerCase().includes(normalizedQuery),
       ),
     );
   }, [query, users]);
@@ -97,6 +103,7 @@ export default function AdminUsersClient() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+
     try {
       await apiDelete(`/api/v1/admin/users/${deleteTarget.id}`);
       setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
@@ -145,7 +152,10 @@ export default function AdminUsersClient() {
         <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}`}>
           View
         </Link>
-        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}/edit`}>
+        <Link
+          className="font-semibold text-emerald-600 hover:underline"
+          href={`/admin/users/${user.id}/edit`}
+        >
           Edit
         </Link>
         <button
@@ -187,7 +197,7 @@ export default function AdminUsersClient() {
           <Input
             placeholder="Search users by name, email, or ID"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
