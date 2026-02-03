@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CreditCard, Receipt } from "lucide-react";
 import { useRole } from "./useRole";
 import { apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
+import { useAuth } from "@/app/lib/auth-context";
 
 type InvoiceItem = {
   id: string;
@@ -11,6 +12,9 @@ type InvoiceItem = {
   amountNPR: number;
   status: "Paid" | "Due" | "Overdue";
   issuedISO: string;
+  dueISO: string;
+  lateFeePercent: number;
+  userId: string;
 };
 
 type InvoiceApi = {
@@ -20,6 +24,15 @@ type InvoiceApi = {
   status: "Paid" | "Due" | "Overdue";
   issuedAt: string;
   dueAt: string;
+  lateFeePercent?: number;
+  userId: string;
+};
+
+type AdminUserApi = {
+  id: string;
+  name: string;
+  email: string;
+  lateFeePercent?: number;
 };
 
 type ApiEnvelope<T> = {
@@ -36,6 +49,9 @@ const demoInvoices: InvoiceItem[] = [
     amountNPR: 5000,
     status: "Due",
     issuedISO: "2026-01-01",
+    dueISO: "2026-01-31",
+    lateFeePercent: 0,
+    userId: "demo-user",
   },
   {
     id: "inv-002",
@@ -43,6 +59,9 @@ const demoInvoices: InvoiceItem[] = [
     amountNPR: 5000,
     status: "Paid",
     issuedISO: "2025-12-01",
+    dueISO: "2025-12-31",
+    lateFeePercent: 0,
+    userId: "demo-user",
   },
   {
     id: "inv-003",
@@ -50,6 +69,9 @@ const demoInvoices: InvoiceItem[] = [
     amountNPR: 5000,
     status: "Paid",
     issuedISO: "2025-11-01",
+    dueISO: "2025-11-30",
+    lateFeePercent: 0,
+    userId: "demo-user",
   },
 ];
 
@@ -60,6 +82,9 @@ function mapInvoice(inv: InvoiceApi): InvoiceItem {
     amountNPR: inv.amountNPR,
     status: inv.status,
     issuedISO: inv.issuedAt,
+    dueISO: inv.dueAt,
+    lateFeePercent: inv.lateFeePercent ?? 0,
+    userId: inv.userId,
   };
 }
 
@@ -89,6 +114,7 @@ function parsePositiveAmount(value: string): number | null {
 
 export default function PaymentsClient() {
   const { role, actualRole } = useRole();
+  const { accessToken, loading: authLoading } = useAuth();
   const isAdmin = actualRole === "admin";
   const isViewingAsAdmin = role === "admin";
   const isDemoMode = !baseUrl;
@@ -96,14 +122,33 @@ export default function PaymentsClient() {
   const invoicesPath = isViewingAsAdmin ? "/api/v1/invoices/all" : "/api/v1/invoices";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [users, setUsers] = useState<AdminUserApi[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createPayload, setCreatePayload] = useState({
+    userId: "",
+    period: "",
+    amountNPR: "",
+    dueAt: "",
+    lateFeePercent: ""
+  });
   const [payingId, setPayingId] = useState<string | null>(null);
   const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
+  const [draftLateFees, setDraftLateFees] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingLateFeeId, setSavingLateFeeId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadInvoices = async () => {
+      if (authLoading) return;
+      if (!accessToken && !isDemoMode) {
+        setInvoices([]);
+        setDraftAmounts({});
+        setDraftLateFees({});
+        return;
+      }
       try {
         const response = await apiGet(invoicesPath);
         const list = unwrapList<InvoiceApi>(response);
@@ -118,6 +163,11 @@ export default function PaymentsClient() {
           for (const inv of mapped) next[inv.id] = String(inv.amountNPR);
           return next;
         });
+        setDraftLateFees((prev) => {
+          const next: Record<string, string> = { ...prev };
+          for (const inv of mapped) next[inv.id] = String(inv.lateFeePercent ?? 0);
+          return next;
+        });
       } catch (error) {
         console.error(error);
         if (cancelled) return;
@@ -127,9 +177,11 @@ export default function PaymentsClient() {
           setDraftAmounts(
             Object.fromEntries(demoInvoices.map((inv) => [inv.id, String(inv.amountNPR)]))
           );
+          setDraftLateFees({});
         } else {
           setInvoices([]);
           setDraftAmounts({});
+          setDraftLateFees({});
         }
       }
     };
@@ -139,7 +191,39 @@ export default function PaymentsClient() {
     return () => {
       cancelled = true;
     };
-  }, [invoicesPath, isDemoMode]);
+  }, [accessToken, authLoading, invoicesPath, isDemoMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      if (!isViewingAsAdmin) return;
+      if (authLoading) return;
+      if (!accessToken && !isDemoMode) {
+        if (!cancelled) setUsers([]);
+        return;
+      }
+      try {
+        const response = await apiGet("/api/v1/admin/users");
+        const list = unwrapList<AdminUserApi>(response);
+        if (!cancelled) {
+          setUsers(list);
+          if (list.length && !createPayload.userId) {
+            setCreatePayload((prev) => ({ ...prev, userId: list[0].id }));
+          }
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) setUsers([]);
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, authLoading, createPayload.userId, isDemoMode, isViewingAsAdmin]);
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
@@ -196,6 +280,10 @@ export default function PaymentsClient() {
     setDraftAmounts((prev) => ({ ...prev, [invoiceId]: nextValue }));
   };
 
+  const handleLateFeeChange = (invoiceId: string, nextValue: string) => {
+    setDraftLateFees((prev) => ({ ...prev, [invoiceId]: nextValue }));
+  };
+
   const handleSaveAmount = async (invoiceId: string) => {
     if (!isAdmin) return;
 
@@ -244,6 +332,114 @@ export default function PaymentsClient() {
     }
   };
 
+  const handleApplyLateFee = async (invoiceId: string) => {
+    if (!isAdmin) return;
+    if (savingLateFeeId) return;
+
+    const inv = invoices.find((i) => i.id === invoiceId);
+    if (!inv) return;
+
+    const draft = draftLateFees[invoiceId] ?? String(inv.lateFeePercent ?? 0);
+    const nextPercent = Number(draft);
+    if (!Number.isFinite(nextPercent) || nextPercent < 0 || nextPercent > 100) return;
+
+    setSavingLateFeeId(invoiceId);
+    try {
+      const response = await apiPatch(`/api/v1/invoices/${invoiceId}/late-fee`, {
+        lateFeePercent: nextPercent,
+      });
+      const updated = unwrapItem<InvoiceApi>(response);
+      if (updated) {
+        setInvoices((prev) =>
+          prev.map((row) =>
+            row.id === invoiceId
+              ? {
+                  ...row,
+                  amountNPR: updated.amountNPR,
+                  lateFeePercent: updated.lateFeePercent ?? 0,
+                  status: updated.status,
+                }
+              : row
+          )
+        );
+        setDraftLateFees((prev) => ({ ...prev, [invoiceId]: String(updated.lateFeePercent ?? 0) }));
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSavingLateFeeId(null);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!isViewingAsAdmin || creating) return;
+    setCreateError(null);
+    const amount = parsePositiveAmount(createPayload.amountNPR);
+    if (!createPayload.userId || !createPayload.period || !amount || !createPayload.dueAt) {
+      setCreateError("Fill in resident, period, amount, and due date.");
+      return;
+    }
+
+    const lateFeePercent = createPayload.lateFeePercent
+      ? Number(createPayload.lateFeePercent)
+      : 0;
+    if (!Number.isFinite(lateFeePercent) || lateFeePercent < 0 || lateFeePercent > 100) {
+      setCreateError("Late fee must be between 0 and 100.");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const response = await apiPost("/api/v1/invoices", {
+        userId: createPayload.userId,
+        period: createPayload.period,
+        amountNPR: amount,
+        dueAt: new Date(createPayload.dueAt).toISOString(),
+        lateFeePercent,
+      });
+      const created = unwrapItem<InvoiceApi>(response);
+      if (created) {
+        const mapped = mapInvoice(created);
+        setInvoices((prev) => [mapped, ...prev]);
+        setDraftAmounts((prev) => ({ ...prev, [mapped.id]: String(mapped.amountNPR) }));
+        setDraftLateFees((prev) => ({ ...prev, [mapped.id]: String(mapped.lateFeePercent) }));
+        setCreatePayload((prev) => ({
+          ...prev,
+          period: "",
+          amountNPR: "",
+          dueAt: "",
+          lateFeePercent: "",
+        }));
+      } else if (isDemoMode) {
+        const mapped: InvoiceItem = {
+          id: `demo-${Date.now()}`,
+          period: createPayload.period,
+          amountNPR: amount,
+          status: "Due",
+          issuedISO: new Date().toISOString(),
+          dueISO: new Date(createPayload.dueAt).toISOString(),
+          lateFeePercent,
+          userId: createPayload.userId,
+        };
+        setInvoices((prev) => [mapped, ...prev]);
+        setDraftAmounts((prev) => ({ ...prev, [mapped.id]: String(mapped.amountNPR) }));
+        setDraftLateFees((prev) => ({ ...prev, [mapped.id]: String(mapped.lateFeePercent) }));
+        setCreatePayload((prev) => ({
+          ...prev,
+          period: "",
+          amountNPR: "",
+          dueAt: "",
+          lateFeePercent: "",
+        }));
+      }
+    } catch (error) {
+      console.error(error);
+      setCreateError("Unable to create invoice. Check your connection and permissions.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const payNowDisabled = !due || payingId !== null;
 
   const getBadgeColor = (status: string) => {
@@ -289,6 +485,82 @@ export default function PaymentsClient() {
               {isViewingAsAdmin
                 ? "Admin mode: you're viewing all resident invoices and can update amounts or mark payments."
                 : "Admin access: you can update invoice amounts even while viewing a resident account."}
+            </div>
+          ) : null}
+
+          {isViewingAsAdmin ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="text-sm font-semibold text-slate-800">Create invoice</div>
+              {users.length === 0 ? (
+                <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  No residents found yet. Create a resident account before issuing invoices.
+                </div>
+              ) : null}
+              <div className="mt-3 grid gap-3 md:grid-cols-5">
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  value={createPayload.userId}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, userId: event.target.value }))
+                  }
+                >
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} · {user.email}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Period (e.g. Jan 2026)"
+                  value={createPayload.period}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, period: event.target.value }))
+                  }
+                />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Amount (NPR)"
+                  inputMode="numeric"
+                  value={createPayload.amountNPR}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, amountNPR: event.target.value }))
+                  }
+                />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  type="date"
+                  value={createPayload.dueAt}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, dueAt: event.target.value }))
+                  }
+                />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Late fee %"
+                  inputMode="numeric"
+                  value={createPayload.lateFeePercent}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, lateFeePercent: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void handleCreateInvoice();
+                  }}
+                  disabled={creating}
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {creating ? "Creating..." : "Create invoice"}
+                </button>
+              </div>
+              {createError ? (
+                <div className="mt-3 text-xs text-red-600">{createError}</div>
+              ) : null}
             </div>
           ) : null}
 
@@ -356,7 +628,9 @@ export default function PaymentsClient() {
               <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
                 <tr>
                   <th className="px-6 py-3">Period</th>
+                  {isViewingAsAdmin ? <th className="px-6 py-3">Resident</th> : null}
                   <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Due</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Action</th>
                 </tr>
@@ -377,9 +651,15 @@ export default function PaymentsClient() {
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
                   const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
 
+                  const resident = users.find((user) => user.id === inv.userId);
                   return (
                     <tr key={inv.id} className="border-t border-slate-200 bg-white hover:bg-slate-50">
                       <td className="px-6 py-3 font-semibold text-slate-900">{inv.period}</td>
+                      {isViewingAsAdmin ? (
+                        <td className="px-6 py-3 text-sm text-slate-600">
+                          {resident ? `${resident.name}` : inv.userId.slice(0, 8)}
+                        </td>
+                      ) : null}
 
                       <td className="px-6 py-3">
                         {isEditableAmount ? (
@@ -409,10 +689,35 @@ export default function PaymentsClient() {
                         )}
                       </td>
 
+                      <td className="px-6 py-3 text-sm text-slate-600">
+                        {new Date(inv.dueISO).toLocaleDateString()}
+                      </td>
+
                       <td className="px-6 py-3">
                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getBadgeColor(inv.status)}`}>
                           {inv.status}
                         </span>
+                        {isAdmin && inv.status !== "Paid" ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                              inputMode="numeric"
+                              value={draftLateFees[inv.id] ?? String(inv.lateFeePercent ?? 0)}
+                              onChange={(event) => handleLateFeeChange(inv.id, event.target.value)}
+                            />
+                            <button
+                              type="button"
+                              disabled={savingLateFeeId === inv.id}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                void handleApplyLateFee(inv.id);
+                              }}
+                              className="rounded-lg bg-amber-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                            >
+                              {savingLateFeeId === inv.id ? "Saving..." : "Apply late fee"}
+                            </button>
+                          </div>
+                        ) : null}
                       </td>
 
                       <td className="px-6 py-3 text-right">
