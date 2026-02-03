@@ -78,10 +78,24 @@ export function apiPost<T>(path: string, body?: unknown) {
   });
 }
 
+export function apiPostForm<T>(path: string, body: FormData) {
+  return request<T>(path, {
+    method: "POST",
+    body
+  });
+}
+
 export function apiPatch<T>(path: string, body?: unknown) {
   return request<T>(path, {
     method: "PATCH",
     body: body ? JSON.stringify(body) : undefined
+  });
+}
+
+export function apiPutForm<T>(path: string, body: FormData) {
+  return request<T>(path, {
+    method: "PUT",
+    body
   });
 }
 

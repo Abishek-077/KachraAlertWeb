@@ -9,6 +9,7 @@ import reportRoutes from "./routes/reportRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import schedulesRoutes from "./routes/schedulesRoutes.js";
+import adminUsersRoutes from "./routes/adminUsersRoutes.js";
 import { errorHandler } from "./middleware/error.js";
 import { env } from "./config/env.js";
 
@@ -35,6 +36,7 @@ app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/invoices", invoiceRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/schedules", schedulesRoutes);
+app.use("/api/v1/admin", adminUsersRoutes);
 
 app.use(errorHandler);
 
