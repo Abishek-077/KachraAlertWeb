@@ -10,7 +10,7 @@ import { apiGet, type ApiError } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type AdminUserDetailPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 type AdminUserApi = {
@@ -26,12 +26,30 @@ type AdminUserApi = {
 
 export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps) {
   const { accessToken, loading: authLoading } = useAuth();
+  const [id, setId] = useState<string>("");
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const init = async () => {
+      const resolved = await params;
+      if (!cancelled) setId(resolved.id);
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  useEffect(() => {
+    if (!id) return;
     if (authLoading) return;
+
     if (!accessToken) {
       setLoading(false);
       return;
@@ -41,7 +59,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
       setLoading(true);
       setErrorMessage(null);
       try {
-        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${params.id}`);
+        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${id}`);
         setUser(response.data ?? null);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -52,7 +70,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
     };
 
     loadUser();
-  }, [accessToken, authLoading, params.id]);
+  }, [accessToken, authLoading, id]);
 
   return (
     <div className="space-y-6">
@@ -60,12 +78,12 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">User Details</h1>
           <p className="text-sm text-slate-500">
-            Viewing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Viewing user: <span className="font-semibold text-slate-800">{id}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={`/admin/users/${params.id}/edit`}
+          href={id ? `/admin/users/${id}/edit` : "/admin/users"}
         >
           Edit user
         </Link>
@@ -90,11 +108,15 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
             <CardBody>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Full name</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Full name
+                  </div>
                   <div className="mt-1 text-base font-semibold text-slate-900">{user.name}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Role</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Role
+                  </div>
                   <div className="mt-1 text-base font-semibold text-slate-900">
                     {user.accountType === "admin_driver" ? "Admin / Driver" : "Resident"}
                   </div>
@@ -116,15 +138,21 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
             <CardBody>
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Society</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Society
+                  </div>
                   <div className="mt-1 text-base font-semibold text-slate-700">{user.society}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Building</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Building
+                  </div>
                   <div className="mt-1 text-base font-semibold text-slate-700">{user.building}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Apartment</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Apartment
+                  </div>
                   <div className="mt-1 text-base font-semibold text-slate-700">{user.apartment}</div>
                 </div>
               </div>

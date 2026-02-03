@@ -10,7 +10,7 @@ import { apiGet, type ApiError } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type AdminUserEditPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 type AdminUserApi = {
@@ -26,12 +26,30 @@ type AdminUserApi = {
 
 export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
   const { accessToken, loading: authLoading } = useAuth();
+  const [id, setId] = useState<string>("");
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const init = async () => {
+      const resolved = await params;
+      if (!cancelled) setId(resolved.id);
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  useEffect(() => {
+    if (!id) return;
     if (authLoading) return;
+
     if (!accessToken) {
       setLoading(false);
       return;
@@ -41,7 +59,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${params.id}`);
+        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${id}`);
         setUser(response.data ?? null);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -52,7 +70,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
     };
 
     loadUser();
-  }, [accessToken, authLoading, params.id]);
+  }, [accessToken, authLoading, id]);
 
   return (
     <div className="space-y-6">
@@ -60,12 +78,12 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Edit User</h1>
           <p className="text-sm text-slate-500">
-            Editing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Editing user: <span className="font-semibold text-slate-800">{id}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={`/admin/users/${params.id}`}
+          href={id ? `/admin/users/${id}` : "/admin/users"}
         >
           Back to profile
         </Link>
