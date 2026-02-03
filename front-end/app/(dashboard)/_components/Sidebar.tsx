@@ -26,7 +26,10 @@ const baseNav = [
   { href: "/alerts", label: "Alerts", icon: Bell },
 ];
 
-const adminNav = [{ href: "/admin", label: "Admin Panel", icon: Shield }];
+const adminNav = [
+  { href: "/admin", label: "Admin Panel", icon: Shield },
+  { href: "/admin/users", label: "User Management", icon: Shield },
+];
 
 const footerNav = [{ href: "/settings", label: "Settings", icon: Settings }];
 
@@ -35,8 +38,6 @@ export default function Sidebar() {
   const router = useRouter();
   const { role } = useRole();
   const { logout } = useAuth();
-
-  const nav = role === "admin" ? [...baseNav, ...adminNav, ...footerNav] : [...baseNav, ...footerNav];
 
   return (
     <aside className="sticky top-0 h-screen w-[270px] border-r border-slate-200 bg-white px-4 py-5">
@@ -58,7 +59,52 @@ export default function Sidebar() {
       </div>
 
       <nav className="mt-5 space-y-1">
-        {nav.map((item) => {
+        {baseNav.map((item) => {
+          const active = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                active
+                  ? "bg-emerald-500 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+              )}
+            >
+              <Icon size={18} />
+              {item.label}
+            </Link>
+          );
+        })}
+        {role === "admin" ? (
+          <div className="mt-4 space-y-1">
+            <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Admin Control
+            </div>
+            {adminNav.map((item) => {
+              const active = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                    active
+                      ? "bg-emerald-500 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                  )}
+                >
+                  <Icon size={18} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+        {footerNav.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
           return (
