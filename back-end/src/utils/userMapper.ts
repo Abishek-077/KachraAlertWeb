@@ -11,6 +11,8 @@ export function mapUser(user: UserDocument) {
     society: user.society,
     building: user.building,
     apartment: user.apartment,
+    isBanned: user.isBanned ?? false,
+    lateFeePercent: user.lateFeePercent ?? 0,
     profileImageUrl: user.profileImage?.filename ? buildProfileImageUrl(user._id.toString()) : null
   };
 }

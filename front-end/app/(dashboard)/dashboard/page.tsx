@@ -16,9 +16,11 @@ import Button from "../_components/Button";
 import { apiGet, baseUrl, type ApiError } from "@/app/lib/api";
 import type { ReportItem, InvoiceItem, ScheduleItem } from "../../../lib/types";
 import { useAlerts } from "@/app/lib/alerts-context";
+import { useAuth } from "@/app/lib/auth-context";
 
 export default function DashboardPage() {
   const { unreadCount } = useAlerts();
+  const { accessToken, loading: authLoading } = useAuth();
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
@@ -29,6 +31,13 @@ export default function DashboardPage() {
   type ScheduleApi = ScheduleItem;
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!accessToken && !isDemoMode) {
+      setReports([]);
+      setInvoices([]);
+      setScheduleItems([]);
+      return;
+    }
     const isNotFound = (error: unknown) => (error as ApiError | undefined)?.status === 404;
 
     const loadReports = async () => {
@@ -82,7 +91,7 @@ export default function DashboardPage() {
     loadReports();
     loadInvoices();
     loadSchedule();
-  }, []);
+  }, [accessToken, authLoading, isDemoMode]);
 
   const dueInvoice = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
 
