@@ -10,7 +10,7 @@ import { apiGet, type ApiError } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type AdminUserEditPageProps = {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 };
 
 type AdminUserApi = {
@@ -26,25 +26,11 @@ type AdminUserApi = {
 
 export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
   const { accessToken, loading: authLoading } = useAuth();
-  const [id, setId] = useState<string>("");
+  const id = params.id;
+
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const init = async () => {
-      const resolved = await params;
-      if (!cancelled) setId(resolved.id);
-    };
-
-    init();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [params]);
 
   useEffect(() => {
     if (!id) return;
@@ -58,6 +44,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
     const loadUser = async () => {
       setLoading(true);
       setErrorMessage(null);
+
       try {
         const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${id}`);
         setUser(response.data ?? null);

@@ -16,7 +16,7 @@ type AdminUser = {
   name: string;
   email: string;
   role: "Resident" | "Admin/Driver";
-  status: "Active" | "Removed";
+  status: "Active" | "Removed" | "Banned";
   society: string;
   building: string;
   apartment: string;
@@ -31,10 +31,13 @@ type AdminUserApi = {
   society: string;
   building: string;
   apartment: string;
+  isBanned?: boolean;
+  lateFeePercent?: number;
 };
 
 export default function AdminUsersClient() {
   const { accessToken, loading: authLoading } = useAuth();
+
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -53,19 +56,22 @@ export default function AdminUsersClient() {
     const loadUsers = async () => {
       setLoading(true);
       setErrorMessage(null);
+
       try {
         const response = await apiGet<AdminUserApi[]>("/api/v1/admin/users");
-        const mapped =
+
+        const mapped: AdminUser[] =
           response.data?.map((user) => ({
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.accountType === "admin_driver" ? "Admin/Driver" : "Resident",
-            status: "Active" as const,
+            status: user.isBanned ? "Banned" : "Active",
             society: user.society,
             building: user.building,
             apartment: user.apartment,
           })) ?? [];
+
         setUsers(mapped);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -83,15 +89,9 @@ export default function AdminUsersClient() {
     if (!normalizedQuery) return users;
 
     return users.filter((user) =>
-      [
-        user.id,
-        user.name,
-        user.email,
-        user.role,
-        user.society,
-        user.building,
-        user.apartment,
-      ].some((value) => value.toLowerCase().includes(normalizedQuery)),
+      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some(
+        (value) => String(value ?? "").toLowerCase().includes(normalizedQuery),
+      ),
     );
   }, [query, users]);
 
@@ -128,19 +128,13 @@ export default function AdminUsersClient() {
 
   const rows = filteredUsers.map((user) => ({
     id: (
-      <div
-        className="max-w-[120px] truncate font-mono text-xs text-slate-500"
-        title={user.id}
-      >
+      <div className="max-w-[120px] truncate font-mono text-xs text-slate-500" title={user.id}>
         {user.id}
       </div>
     ),
     name: <div className="font-semibold text-slate-900">{user.name}</div>,
     email: (
-      <div
-        className="max-w-[200px] truncate text-sm text-slate-500"
-        title={user.email}
-      >
+      <div className="max-w-[200px] truncate text-sm text-slate-500" title={user.email}>
         {user.email}
       </div>
     ),
@@ -149,14 +143,13 @@ export default function AdminUsersClient() {
     building: <div className="text-sm text-slate-600">{user.building}</div>,
     apartment: <div className="text-sm text-slate-600">{user.apartment}</div>,
     status: (
-      <Badge tone={user.status === "Active" ? "emerald" : "slate"}>{user.status}</Badge>
+      <Badge tone={user.status === "Active" ? "emerald" : user.status === "Banned" ? "red" : "slate"}>
+        {user.status}
+      </Badge>
     ),
     actions: (
       <div className="flex flex-col items-start gap-2 text-sm">
-        <Link
-          className="font-semibold text-emerald-600 hover:underline"
-          href={`/admin/users/${user.id}`}
-        >
+        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}`}>
           View
         </Link>
         <Link

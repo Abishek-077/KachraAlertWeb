@@ -165,6 +165,12 @@ export async function updateUser(req: MulterAuthRequest, res: Response, next: Ne
     user.society = req.body.society ?? user.society;
     user.building = req.body.building ?? user.building;
     user.apartment = req.body.apartment ?? user.apartment;
+    if (typeof req.body.isBanned === "boolean") {
+      user.isBanned = req.body.isBanned;
+    }
+    if (typeof req.body.lateFeePercent === "number") {
+      user.lateFeePercent = req.body.lateFeePercent;
+    }
 
     if (req.body.password) {
       user.passwordHash = await bcrypt.hash(req.body.password, 12);
@@ -182,6 +188,27 @@ export async function updateUser(req: MulterAuthRequest, res: Response, next: Ne
 
     await user.save();
     return sendSuccess(res, "User updated", mapUser(user));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function updateUserStatus(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      throw new AppError("User not found", 404, "NOT_FOUND");
+    }
+
+    if (typeof req.body.isBanned === "boolean") {
+      user.isBanned = req.body.isBanned;
+    }
+    if (typeof req.body.lateFeePercent === "number") {
+      user.lateFeePercent = req.body.lateFeePercent;
+    }
+
+    await user.save();
+    return sendSuccess(res, "User status updated", mapUser(user));
   } catch (err) {
     return next(err);
   }
