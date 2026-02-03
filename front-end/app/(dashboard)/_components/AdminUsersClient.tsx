@@ -43,6 +43,7 @@ export default function AdminUsersClient() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!accessToken) {
       setUsers([]);
       setLoading(false);
@@ -63,7 +64,7 @@ export default function AdminUsersClient() {
             status: "Active",
             society: user.society,
             building: user.building,
-            apartment: user.apartment
+            apartment: user.apartment,
           })) ?? [];
         setUsers(mapped);
       } catch (error) {
@@ -80,21 +81,31 @@ export default function AdminUsersClient() {
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return users;
+
     return users.filter((user) =>
-      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some((value) =>
-        value.toLowerCase().includes(normalizedQuery),
-      ),
+      [
+        user.id,
+        user.name,
+        user.email,
+        user.role,
+        user.society,
+        user.building,
+        user.apartment,
+      ].some((value) => value.toLowerCase().includes(normalizedQuery)),
     );
   }, [query, users]);
 
   const handleRemove = (id: string) => {
     setUsers((prev) =>
-      prev.map((user) => (user.id === id ? { ...user, status: "Removed" } : user)),
+      prev.map((user) =>
+        user.id === id ? { ...user, status: "Removed" } : user,
+      ),
     );
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+
     try {
       await apiDelete(`/api/v1/admin/users/${deleteTarget.id}`);
       setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
@@ -119,13 +130,19 @@ export default function AdminUsersClient() {
 
   const rows = filteredUsers.map((user) => ({
     id: (
-      <div className="max-w-[120px] truncate font-mono text-xs text-slate-500" title={user.id}>
+      <div
+        className="max-w-[120px] truncate font-mono text-xs text-slate-500"
+        title={user.id}
+      >
         {user.id}
       </div>
     ),
     name: <div className="font-semibold text-slate-900">{user.name}</div>,
     email: (
-      <div className="max-w-[200px] truncate text-sm text-slate-500" title={user.email}>
+      <div
+        className="max-w-[200px] truncate text-sm text-slate-500"
+        title={user.email}
+      >
         {user.email}
       </div>
     ),
@@ -134,14 +151,22 @@ export default function AdminUsersClient() {
     building: <div className="text-sm text-slate-600">{user.building}</div>,
     apartment: <div className="text-sm text-slate-600">{user.apartment}</div>,
     status: (
-      <Badge tone={user.status === "Active" ? "emerald" : "slate"}>{user.status}</Badge>
+      <Badge tone={user.status === "Active" ? "emerald" : "slate"}>
+        {user.status}
+      </Badge>
     ),
     actions: (
       <div className="flex flex-col items-start gap-2 text-sm">
-        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}`}>
+        <Link
+          className="font-semibold text-emerald-600 hover:underline"
+          href={`/admin/users/${user.id}`}
+        >
           View
         </Link>
-        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}/edit`}>
+        <Link
+          className="font-semibold text-emerald-600 hover:underline"
+          href={`/admin/users/${user.id}/edit`}
+        >
           Edit
         </Link>
         <button
@@ -168,7 +193,9 @@ export default function AdminUsersClient() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
-          <p className="text-sm text-slate-500">Manage residents and admin drivers from one place.</p>
+          <p className="text-sm text-slate-500">
+            Manage residents and admin drivers from one place.
+          </p>
         </div>
         <Link
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600"
@@ -183,7 +210,7 @@ export default function AdminUsersClient() {
           <Input
             placeholder="Search users by name, email, or ID"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
