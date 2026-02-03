@@ -56,7 +56,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
       }
     };
 
-    loadUser();
+    void loadUser();
   }, [accessToken, authLoading, id]);
 
   return (

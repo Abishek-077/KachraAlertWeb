@@ -37,7 +37,6 @@ type AdminUserApi = {
 
 export default function AdminUsersClient() {
   const { accessToken, loading: authLoading } = useAuth();
-
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -81,7 +80,7 @@ export default function AdminUsersClient() {
       }
     };
 
-    loadUsers();
+    void loadUsers();
   }, [accessToken, authLoading]);
 
   const filteredUsers = useMemo(() => {
@@ -96,9 +95,7 @@ export default function AdminUsersClient() {
   }, [query, users]);
 
   const handleRemove = (id: string) => {
-    setUsers((prev) =>
-      prev.map((user) => (user.id === id ? { ...user, status: "Removed" } : user)),
-    );
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: "Removed" } : u)));
   };
 
   const handleDelete = async () => {
@@ -106,7 +103,7 @@ export default function AdminUsersClient() {
 
     try {
       await apiDelete(`/api/v1/admin/users/${deleteTarget.id}`);
-      setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (error) {
       const apiError = error as ApiError | undefined;
@@ -152,10 +149,7 @@ export default function AdminUsersClient() {
         <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}`}>
           View
         </Link>
-        <Link
-          className="font-semibold text-emerald-600 hover:underline"
-          href={`/admin/users/${user.id}/edit`}
-        >
+        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}/edit`}>
           Edit
         </Link>
         <button
@@ -166,11 +160,7 @@ export default function AdminUsersClient() {
         >
           Remove
         </button>
-        <button
-          className="font-semibold text-red-600 hover:underline"
-          onClick={() => setDeleteTarget(user)}
-          type="button"
-        >
+        <button className="font-semibold text-red-600 hover:underline" onClick={() => setDeleteTarget(user)} type="button">
           Delete
         </button>
       </div>
@@ -194,15 +184,9 @@ export default function AdminUsersClient() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
         <div className="min-w-[220px] flex-1">
-          <Input
-            placeholder="Search users by name, email, or ID"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <Input placeholder="Search users by name, email, or ID" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {filteredUsers.length} users
-        </div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{filteredUsers.length} users</div>
       </div>
 
       {loading ? (
@@ -225,9 +209,7 @@ export default function AdminUsersClient() {
       >
         <div className="space-y-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-            {deleteTarget
-              ? `You are about to delete ${deleteTarget.name} (${deleteTarget.email}).`
-              : "Select a user to delete."}
+            {deleteTarget ? `You are about to delete ${deleteTarget.name} (${deleteTarget.email}).` : "Select a user to delete."}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>

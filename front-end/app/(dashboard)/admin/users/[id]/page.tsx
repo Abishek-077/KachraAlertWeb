@@ -63,7 +63,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
       }
     };
 
-    loadUser();
+    void loadUser();
   }, [accessToken, authLoading, id]);
 
   return (
@@ -98,9 +98,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
               title="Profile overview"
               subtitle="Quick snapshot of account health and access."
               right={
-                <Badge tone={user.isBanned ? "red" : "emerald"}>
-                  {user.isBanned ? "Banned" : "Active"}
-                </Badge>
+                <Badge tone={user.isBanned ? "red" : "emerald"}>{user.isBanned ? "Banned" : "Active"}</Badge>
               }
             />
             <CardBody>
@@ -161,10 +159,9 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                         setSavingStatus(true);
 
                         try {
-                          const response = await apiPatch<AdminUserApi>(
-                            `/api/v1/admin/users/${id}/status`,
-                            { isBanned: !user.isBanned },
-                          );
+                          const response = await apiPatch<AdminUserApi>(`/api/v1/admin/users/${id}/status`, {
+                            isBanned: !user.isBanned,
+                          });
                           if (response.data) setUser(response.data);
                         } catch (error) {
                           const apiError = error as ApiError | undefined;
@@ -207,10 +204,9 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
 
                         setSavingStatus(true);
                         try {
-                          const response = await apiPatch<AdminUserApi>(
-                            `/api/v1/admin/users/${id}/status`,
-                            { lateFeePercent: nextPercent },
-                          );
+                          const response = await apiPatch<AdminUserApi>(`/api/v1/admin/users/${id}/status`, {
+                            lateFeePercent: nextPercent,
+                          });
                           if (response.data) setUser(response.data);
                         } catch (error) {
                           const apiError = error as ApiError | undefined;
