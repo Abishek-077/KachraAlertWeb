@@ -12,6 +12,12 @@ type IncomingProfileImage = {
   dataBase64: string;
 };
 
+type IncomingProfileImageFile = {
+  originalname: string;
+  mimetype: string;
+  buffer: Buffer;
+};
+
 export function writeProfileImage(image: IncomingProfileImage) {
   const ext = path.extname(image.name);
   const filename = `${Date.now()}-${randomUUID()}${ext}`;
@@ -23,6 +29,20 @@ export function writeProfileImage(image: IncomingProfileImage) {
     originalName: image.name,
     mimeType: image.mimeType,
     size: buffer.length,
+    uploadedAt: new Date()
+  };
+}
+
+export function writeProfileImageFile(image: IncomingProfileImageFile) {
+  const ext = path.extname(image.originalname);
+  const filename = `${Date.now()}-${randomUUID()}${ext}`;
+  const filePath = path.join(profileUploadsDir, filename);
+  fs.writeFileSync(filePath, image.buffer);
+  return {
+    filename,
+    originalName: image.originalname,
+    mimeType: image.mimetype,
+    size: image.buffer.length,
     uploadedAt: new Date()
   };
 }
