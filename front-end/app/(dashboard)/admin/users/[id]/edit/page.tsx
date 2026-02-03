@@ -81,9 +81,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
           Loading user details...
         </div>
       ) : errorMessage ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
-          {errorMessage}
-        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">{errorMessage}</div>
       ) : user ? (
         <>
           <Card>

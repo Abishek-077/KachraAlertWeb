@@ -1,4 +1,4 @@
-https://github.com/Abishek-077/KachraAlertWeb/pull/36/conflict?name=front-end%252Fapp%252F%2528dashboard%2529%252F_components%252FPaymentsClient.tsx&ancestor_oid=82fbb2fe36417e81f4fe14a7cd92771efe2a046e&base_oid=be90d362ac946e7a9264c485111b1e8d4fb4e8d2&head_oid=c13e7a3d5147eceb3d49b7fe244562717a58b55b"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CreditCard, Receipt } from "lucide-react";
@@ -234,7 +234,6 @@ export default function PaymentsClient() {
   }, [accessToken, authLoading, createPayload.userId, isDemoMode, isViewingAsAdmin]);
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
-
   const paidCount = useMemo(() => invoices.filter((i) => i.status === "Paid").length, [invoices]);
 
   const dueDraftAmount = due ? parsePositiveAmount(draftAmounts[due.id] ?? String(due.amountNPR)) : null;
@@ -428,7 +427,6 @@ export default function PaymentsClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
-      {/* Header Card */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow">
         <div className="border-b border-slate-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -544,18 +542,14 @@ export default function PaymentsClient() {
                   <CheckCircle2 size={18} />
                 </div>
               </div>
-              <div className="mt-2 text-sm text-slate-600">
-                {due ? `Pay ${due.period} invoice to avoid late fees.` : "Thanks! You're all set."}
-              </div>
+              <div className="mt-2 text-sm text-slate-600">{due ? `Pay ${due.period} invoice to avoid late fees.` : "Thanks! You're all set."}</div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Amount due</div>
-                  <div className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}
-                  </div>
+                  <div className="mt-1 text-2xl font-extrabold text-slate-900">{due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}</div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                   <CreditCard size={18} />
@@ -580,7 +574,6 @@ export default function PaymentsClient() {
         </div>
       </div>
 
-      {/* Invoices Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow">
         <div className="border-b border-slate-200 px-6 py-4">
           <h3 className="text-lg font-bold text-slate-900">Invoices</h3>
@@ -608,10 +601,7 @@ export default function PaymentsClient() {
                   const parsedDraft = parsePositiveAmount(draftValue);
 
                   const canSave =
-                    isEditableAmount &&
-                    savingId !== inv.id &&
-                    parsedDraft !== null &&
-                    parsedDraft !== inv.amountNPR;
+                    isEditableAmount && savingId !== inv.id && parsedDraft !== null && parsedDraft !== inv.amountNPR;
 
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
                   const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
@@ -623,9 +613,7 @@ export default function PaymentsClient() {
                       <td className="px-6 py-3 font-semibold text-slate-900">{inv.period}</td>
 
                       {isViewingAsAdmin ? (
-                        <td className="px-6 py-3 text-sm text-slate-600">
-                          {resident ? resident.name : inv.userId.slice(0, 8)}
-                        </td>
+                        <td className="px-6 py-3 text-sm text-slate-600">{resident ? resident.name : inv.userId.slice(0, 8)}</td>
                       ) : null}
 
                       <td className="px-6 py-3">
@@ -688,7 +676,11 @@ export default function PaymentsClient() {
 
                       <td className="px-6 py-3 text-right">
                         {inv.status === "Paid" ? (
-                          <button type="button" disabled className="cursor-not-allowed rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          <button
+                            type="button"
+                            disabled
+                            className="cursor-not-allowed rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+                          >
                             Receipt
                           </button>
                         ) : (

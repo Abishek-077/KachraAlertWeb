@@ -88,8 +88,8 @@ export default function AdminUsersClient() {
     if (!normalizedQuery) return users;
 
     return users.filter((user) =>
-      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some(
-        (value) => String(value ?? "").toLowerCase().includes(normalizedQuery),
+      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some((value) =>
+        String(value ?? "").toLowerCase().includes(normalizedQuery),
       ),
     );
   }, [query, users]);

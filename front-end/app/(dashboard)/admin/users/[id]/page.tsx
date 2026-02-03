@@ -88,18 +88,14 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
           Loading user details...
         </div>
       ) : errorMessage ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
-          {errorMessage}
-        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">{errorMessage}</div>
       ) : user ? (
         <>
           <Card>
             <CardHeader
               title="Profile overview"
               subtitle="Quick snapshot of account health and access."
-              right={
-                <Badge tone={user.isBanned ? "red" : "emerald"}>{user.isBanned ? "Banned" : "Active"}</Badge>
-              }
+              right={<Badge tone={user.isBanned ? "red" : "emerald"}>{user.isBanned ? "Banned" : "Active"}</Badge>}
             />
             <CardBody>
               <div className="grid gap-4 md:grid-cols-2">
@@ -220,9 +216,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                     </Button>
                   </div>
 
-                  <div className="text-xs text-slate-500">
-                    This percentage is applied when you add late fees to overdue invoices.
-                  </div>
+                  <div className="text-xs text-slate-500">This percentage is applied when you add late fees to overdue invoices.</div>
                 </div>
               </div>
             </CardBody>
