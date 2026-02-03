@@ -28,14 +28,19 @@ type AdminUserApi = {
 
 export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps) {
   const { accessToken, loading: authLoading } = useAuth();
+  const id = params.id;
+
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const [savingStatus, setSavingStatus] = useState(false);
   const [lateFeeDraft, setLateFeeDraft] = useState<string>("");
 
   useEffect(() => {
+    if (!id) return;
     if (authLoading) return;
+
     if (!accessToken) {
       setLoading(false);
       return;
@@ -44,13 +49,12 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
     const loadUser = async () => {
       setLoading(true);
       setErrorMessage(null);
+
       try {
-        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${params.id}`);
+        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${id}`);
         const payload = response.data ?? null;
         setUser(payload);
-        if (payload) {
-          setLateFeeDraft(String(payload.lateFeePercent ?? 0));
-        }
+        setLateFeeDraft(payload ? String(payload.lateFeePercent ?? 0) : "");
       } catch (error) {
         const apiError = error as ApiError | undefined;
         setErrorMessage(apiError?.message ?? "Unable to load user details.");
@@ -59,8 +63,8 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
       }
     };
 
-    loadUser();
-  }, [accessToken, authLoading, params.id]);
+    void loadUser();
+  }, [accessToken, authLoading, id]);
 
   return (
     <div className="space-y-6">
@@ -68,12 +72,12 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">User Details</h1>
           <p className="text-sm text-slate-500">
-            Viewing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Viewing user: <span className="font-semibold text-slate-800">{id}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={`/admin/users/${params.id}/edit`}
+          href={id ? `/admin/users/${id}/edit` : "/admin/users"}
         >
           Edit user
         </Link>
@@ -94,9 +98,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
               title="Profile overview"
               subtitle="Quick snapshot of account health and access."
               right={
-                <Badge tone={user.isBanned ? "red" : "emerald"}>
-                  {user.isBanned ? "Banned" : "Active"}
-                </Badge>
+                <Badge tone={user.isBanned ? "red" : "emerald"}>{user.isBanned ? "Banned" : "Active"}</Badge>
               }
             />
             <CardBody>
@@ -155,14 +157,12 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                       onClick={async () => {
                         if (savingStatus) return;
                         setSavingStatus(true);
+
                         try {
-                          const response = await apiPatch<AdminUserApi>(
-                            `/api/v1/admin/users/${params.id}/status`,
-                            { isBanned: !user.isBanned }
-                          );
-                          if (response.data) {
-                            setUser(response.data);
-                          }
+                          const response = await apiPatch<AdminUserApi>(`/api/v1/admin/users/${id}/status`, {
+                            isBanned: !user.isBanned,
+                          });
+                          if (response.data) setUser(response.data);
                         } catch (error) {
                           const apiError = error as ApiError | undefined;
                           setErrorMessage(apiError?.message ?? "Unable to update user status.");
@@ -171,15 +171,13 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                         }
                       }}
                     >
-                      {savingStatus
-                        ? "Updating..."
-                        : user.isBanned
-                          ? "Unban user"
-                          : "Ban user"}
+                      {savingStatus ? "Updating..." : user.isBanned ? "Unban user" : "Ban user"}
                     </Button>
+
                     <Button variant="secondary">Reset password</Button>
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Late fee</div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -192,24 +190,24 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                         onChange={(event) => setLateFeeDraft(event.target.value)}
                       />
                     </div>
+
                     <Button
                       variant="secondary"
                       onClick={async () => {
                         if (savingStatus) return;
+
                         const nextPercent = Number(lateFeeDraft);
                         if (!Number.isFinite(nextPercent) || nextPercent < 0 || nextPercent > 100) {
                           setErrorMessage("Late fee must be between 0 and 100.");
                           return;
                         }
+
                         setSavingStatus(true);
                         try {
-                          const response = await apiPatch<AdminUserApi>(
-                            `/api/v1/admin/users/${params.id}/status`,
-                            { lateFeePercent: nextPercent }
-                          );
-                          if (response.data) {
-                            setUser(response.data);
-                          }
+                          const response = await apiPatch<AdminUserApi>(`/api/v1/admin/users/${id}/status`, {
+                            lateFeePercent: nextPercent,
+                          });
+                          if (response.data) setUser(response.data);
                         } catch (error) {
                           const apiError = error as ApiError | undefined;
                           setErrorMessage(apiError?.message ?? "Unable to update late fee.");
@@ -221,6 +219,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                       {savingStatus ? "Saving..." : "Save fee"}
                     </Button>
                   </div>
+
                   <div className="text-xs text-slate-500">
                     This percentage is applied when you add late fees to overdue invoices.
                   </div>

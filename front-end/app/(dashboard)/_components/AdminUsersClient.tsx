@@ -45,6 +45,7 @@ export default function AdminUsersClient() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!accessToken) {
       setUsers([]);
       setLoading(false);
@@ -54,9 +55,11 @@ export default function AdminUsersClient() {
     const loadUsers = async () => {
       setLoading(true);
       setErrorMessage(null);
+
       try {
         const response = await apiGet<AdminUserApi[]>("/api/v1/admin/users");
-        const mapped =
+
+        const mapped: AdminUser[] =
           response.data?.map((user) => ({
             id: user.id,
             name: user.name,
@@ -65,8 +68,9 @@ export default function AdminUsersClient() {
             status: user.isBanned ? "Banned" : "Active",
             society: user.society,
             building: user.building,
-            apartment: user.apartment
+            apartment: user.apartment,
           })) ?? [];
+
         setUsers(mapped);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -76,30 +80,30 @@ export default function AdminUsersClient() {
       }
     };
 
-    loadUsers();
+    void loadUsers();
   }, [accessToken, authLoading]);
 
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return users;
+
     return users.filter((user) =>
-      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some((value) =>
-        value.toLowerCase().includes(normalizedQuery),
+      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some(
+        (value) => String(value ?? "").toLowerCase().includes(normalizedQuery),
       ),
     );
   }, [query, users]);
 
   const handleRemove = (id: string) => {
-    setUsers((prev) =>
-      prev.map((user) => (user.id === id ? { ...user, status: "Removed" } : user)),
-    );
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: "Removed" } : u)));
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+
     try {
       await apiDelete(`/api/v1/admin/users/${deleteTarget.id}`);
-      setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (error) {
       const apiError = error as ApiError | undefined;
@@ -156,11 +160,7 @@ export default function AdminUsersClient() {
         >
           Remove
         </button>
-        <button
-          className="font-semibold text-red-600 hover:underline"
-          onClick={() => setDeleteTarget(user)}
-          type="button"
-        >
+        <button className="font-semibold text-red-600 hover:underline" onClick={() => setDeleteTarget(user)} type="button">
           Delete
         </button>
       </div>
@@ -184,15 +184,9 @@ export default function AdminUsersClient() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
         <div className="min-w-[220px] flex-1">
-          <Input
-            placeholder="Search users by name, email, or ID"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <Input placeholder="Search users by name, email, or ID" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {filteredUsers.length} users
-        </div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{filteredUsers.length} users</div>
       </div>
 
       {loading ? (
@@ -215,9 +209,7 @@ export default function AdminUsersClient() {
       >
         <div className="space-y-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-            {deleteTarget
-              ? `You are about to delete ${deleteTarget.name} (${deleteTarget.email}).`
-              : "Select a user to delete."}
+            {deleteTarget ? `You are about to delete ${deleteTarget.name} (${deleteTarget.email}).` : "Select a user to delete."}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
