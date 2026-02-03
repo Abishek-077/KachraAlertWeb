@@ -61,6 +61,9 @@ export async function login(payload: { email: string; password: string; remember
   if (!user) {
     throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
   }
+  if (user.isBanned) {
+    throw new AppError("Account is suspended", 403, "ACCOUNT_BANNED");
+  }
 
   const matches = await bcrypt.compare(payload.password, user.passwordHash);
   if (!matches) {
@@ -105,6 +108,9 @@ export async function refresh(refreshToken: string, meta: { ip?: string; userAge
   if (!user) {
     throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
+  if (user.isBanned) {
+    throw new AppError("Account is suspended", 403, "ACCOUNT_BANNED");
+  }
 
   return issueTokens(user, meta, false);
 }
@@ -147,6 +153,9 @@ export async function resetPassword(token: string, password: string) {
 export async function getMe(userId: string) {
   const user = await userRepository.findById(userId);
   if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+  if (user.isBanned) {
+    throw new AppError("Account is suspended", 403, "ACCOUNT_BANNED");
+  }
   return user;
 }
 

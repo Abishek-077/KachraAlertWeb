@@ -19,5 +19,12 @@ export const adminUpdateUserSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   society: z.string().min(1, "Society is required").optional(),
   building: z.string().min(1, "Building is required").optional(),
-  apartment: z.string().min(1, "Apartment is required").optional()
+  apartment: z.string().min(1, "Apartment is required").optional(),
+  isBanned: z.boolean().optional(),
+  lateFeePercent: z.number().min(0).max(100).optional()
+});
+
+export const adminUpdateUserStatusSchema = z.object({
+  isBanned: z.boolean().optional(),
+  lateFeePercent: z.number().min(0).max(100).optional()
 });
