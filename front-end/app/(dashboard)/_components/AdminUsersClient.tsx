@@ -1,0 +1,152 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+
+import Badge from "./Badge";
+import Button from "./Button";
+import DataTable from "./DataTable";
+import Input from "./Input";
+import Modal from "./Modal";
+
+type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: "Resident" | "Admin/Driver";
+  status: "Active" | "Removed";
+};
+
+const initialUsers: AdminUser[] = [
+  { id: "u-1001", name: "Aarav Singh", email: "aarav@example.com", role: "Resident", status: "Active" },
+  { id: "u-1002", name: "Priya Patel", email: "priya@example.com", role: "Admin/Driver", status: "Active" },
+  { id: "u-1003", name: "Rohan Sharma", email: "rohan@example.com", role: "Resident", status: "Active" },
+  { id: "u-1004", name: "Leena Shrestha", email: "leena@example.com", role: "Resident", status: "Active" },
+];
+
+export default function AdminUsersClient() {
+  const [query, setQuery] = useState("");
+  const [users, setUsers] = useState<AdminUser[]>(initialUsers);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return users;
+    return users.filter((user) =>
+      [user.id, user.name, user.email, user.role].some((value) =>
+        value.toLowerCase().includes(normalizedQuery),
+      ),
+    );
+  }, [query, users]);
+
+  const handleRemove = (id: string) => {
+    setUsers((prev) =>
+      prev.map((user) => (user.id === id ? { ...user, status: "Removed" } : user)),
+    );
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
+
+  const columns = [
+    { key: "id", label: "ID", className: "font-semibold text-slate-700" },
+    { key: "name", label: "Name" },
+    { key: "email", label: "Email", className: "text-slate-500" },
+    { key: "role", label: "Role" },
+    { key: "status", label: "Status" },
+    { key: "actions", label: "Actions" },
+  ];
+
+  const rows = filteredUsers.map((user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: (
+      <Badge tone={user.status === "Active" ? "emerald" : "slate"}>{user.status}</Badge>
+    ),
+    actions: (
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}`}>
+          View
+        </Link>
+        <Link className="font-semibold text-emerald-600 hover:underline" href={`/admin/users/${user.id}/edit`}>
+          Edit
+        </Link>
+        <button
+          className="font-semibold text-slate-600 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => handleRemove(user.id)}
+          disabled={user.status === "Removed"}
+          type="button"
+        >
+          Remove
+        </button>
+        <button
+          className="font-semibold text-red-600 hover:underline"
+          onClick={() => setDeleteTarget(user)}
+          type="button"
+        >
+          Delete
+        </button>
+      </div>
+    ),
+  }));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
+          <p className="text-sm text-slate-500">Manage residents and admin drivers from one place.</p>
+        </div>
+        <Link
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600"
+          href="/admin/users/create"
+        >
+          Add user
+        </Link>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+        <div className="min-w-[220px] flex-1">
+          <Input
+            placeholder="Search users by name, email, or ID"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          {filteredUsers.length} users
+        </div>
+      </div>
+
+      <DataTable columns={columns} rows={rows} />
+
+      <Modal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete user"
+        description="This action permanently deletes the user and all related records."
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            {deleteTarget
+              ? `You are about to delete ${deleteTarget.name} (${deleteTarget.email}).`
+              : "Select a user to delete."}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Confirm delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}

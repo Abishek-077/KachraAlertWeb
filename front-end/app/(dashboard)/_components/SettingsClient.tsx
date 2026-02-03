@@ -57,6 +57,17 @@ export default function SettingsClient() {
       if (previousProfileImageUrl.current === user.profileImageUrl) return;
       try {
         const blob = await apiGetBlob(user.profileImageUrl);
+        if (!blob) {
+          if (profileImageObjectUrl.current) {
+            URL.revokeObjectURL(profileImageObjectUrl.current);
+          }
+          profileImageObjectUrl.current = null;
+          previousProfileImageUrl.current = user.profileImageUrl;
+          if (isActive) {
+            setProfileImagePreview(null);
+          }
+          return;
+        }
         const objectUrl = URL.createObjectURL(blob);
         if (profileImageObjectUrl.current) {
           URL.revokeObjectURL(profileImageObjectUrl.current);

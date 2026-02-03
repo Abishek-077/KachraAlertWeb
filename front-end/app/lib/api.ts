@@ -108,12 +108,16 @@ export async function apiGetBlob(path: string) {
   if (accessToken) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
-  const response = await fetch(`${baseUrl}${path}`, {
+  const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
+  const response = await fetch(url, {
     method: "GET",
     headers,
     credentials: "include"
   });
   if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
     const error = new Error(response.statusText || "Request failed") as ApiError;
     error.status = response.status;
     throw error;
