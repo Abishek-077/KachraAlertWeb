@@ -61,7 +61,7 @@ export default function AdminUsersClient() {
             name: user.name,
             email: user.email,
             role: user.accountType === "admin_driver" ? "Admin/Driver" : "Resident",
-            status: "Active",
+            status: "Active" as const,
             society: user.society,
             building: user.building,
             apartment: user.apartment,
@@ -97,9 +97,7 @@ export default function AdminUsersClient() {
 
   const handleRemove = (id: string) => {
     setUsers((prev) =>
-      prev.map((user) =>
-        user.id === id ? { ...user, status: "Removed" } : user,
-      ),
+      prev.map((user) => (user.id === id ? { ...user, status: "Removed" } : user)),
     );
   };
 
@@ -151,9 +149,7 @@ export default function AdminUsersClient() {
     building: <div className="text-sm text-slate-600">{user.building}</div>,
     apartment: <div className="text-sm text-slate-600">{user.apartment}</div>,
     status: (
-      <Badge tone={user.status === "Active" ? "emerald" : "slate"}>
-        {user.status}
-      </Badge>
+      <Badge tone={user.status === "Active" ? "emerald" : "slate"}>{user.status}</Badge>
     ),
     actions: (
       <div className="flex flex-col items-start gap-2 text-sm">
@@ -193,9 +189,7 @@ export default function AdminUsersClient() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
-          <p className="text-sm text-slate-500">
-            Manage residents and admin drivers from one place.
-          </p>
+          <p className="text-sm text-slate-500">Manage residents and admin drivers from one place.</p>
         </div>
         <Link
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600"
