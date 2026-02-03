@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import Badge from "./Badge";
@@ -8,6 +8,8 @@ import Button from "./Button";
 import DataTable from "./DataTable";
 import Input from "./Input";
 import Modal from "./Modal";
+import { apiDelete, apiGet, type ApiError } from "@/app/lib/api";
+import { useAuth } from "@/app/lib/auth-context";
 
 type AdminUser = {
   id: string;
@@ -15,25 +17,71 @@ type AdminUser = {
   email: string;
   role: "Resident" | "Admin/Driver";
   status: "Active" | "Removed";
+  society: string;
+  building: string;
+  apartment: string;
 };
 
-const initialUsers: AdminUser[] = [
-  { id: "u-1001", name: "Aarav Singh", email: "aarav@example.com", role: "Resident", status: "Active" },
-  { id: "u-1002", name: "Priya Patel", email: "priya@example.com", role: "Admin/Driver", status: "Active" },
-  { id: "u-1003", name: "Rohan Sharma", email: "rohan@example.com", role: "Resident", status: "Active" },
-  { id: "u-1004", name: "Leena Shrestha", email: "leena@example.com", role: "Resident", status: "Active" },
-];
+type AdminUserApi = {
+  id: string;
+  accountType: "resident" | "admin_driver";
+  name: string;
+  email: string;
+  phone: string;
+  society: string;
+  building: string;
+  apartment: string;
+};
 
 export default function AdminUsersClient() {
+  const { accessToken, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
-  const [users, setUsers] = useState<AdminUser[]>(initialUsers);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!accessToken) {
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+
+    const loadUsers = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const response = await apiGet<AdminUserApi[]>("/api/v1/admin/users");
+        const mapped =
+          response.data?.map((user) => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.accountType === "admin_driver" ? "Admin/Driver" : "Resident",
+            status: "Active",
+            society: user.society,
+            building: user.building,
+            apartment: user.apartment
+          })) ?? [];
+        setUsers(mapped);
+      } catch (error) {
+        const apiError = error as ApiError | undefined;
+        setErrorMessage(apiError?.message ?? "Unable to load users.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, [accessToken, authLoading]);
 
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return users;
     return users.filter((user) =>
-      [user.id, user.name, user.email, user.role].some((value) =>
+      [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some((value) =>
         value.toLowerCase().includes(normalizedQuery),
       ),
     );
@@ -45,10 +93,16 @@ export default function AdminUsersClient() {
     );
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    try {
+      await apiDelete(`/api/v1/admin/users/${deleteTarget.id}`);
+      setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (error) {
+      const apiError = error as ApiError | undefined;
+      setErrorMessage(apiError?.message ?? "Unable to delete user.");
+    }
   };
 
   const columns = [
@@ -56,6 +110,9 @@ export default function AdminUsersClient() {
     { key: "name", label: "Name" },
     { key: "email", label: "Email", className: "text-slate-500" },
     { key: "role", label: "Role" },
+    { key: "society", label: "Society" },
+    { key: "building", label: "Building" },
+    { key: "apartment", label: "Apartment" },
     { key: "status", label: "Status" },
     { key: "actions", label: "Actions" },
   ];
@@ -65,6 +122,9 @@ export default function AdminUsersClient() {
     name: user.name,
     email: user.email,
     role: user.role,
+    society: user.society,
+    building: user.building,
+    apartment: user.apartment,
     status: (
       <Badge tone={user.status === "Active" ? "emerald" : "slate"}>{user.status}</Badge>
     ),
@@ -123,7 +183,17 @@ export default function AdminUsersClient() {
         </div>
       </div>
 
-      <DataTable columns={columns} rows={rows} />
+      {loading ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">
+          Loading users...
+        </div>
+      ) : errorMessage ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
+          {errorMessage}
+        </div>
+      ) : (
+        <DataTable columns={columns} rows={rows} />
+      )}
 
       <Modal
         open={Boolean(deleteTarget)}
