@@ -5,22 +5,23 @@ import Button from "@/app/(dashboard)/_components/Button";
 import Card, { CardBody, CardHeader } from "@/app/(dashboard)/_components/Card";
 
 type AdminUserDetailPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps) {
+export default async function AdminUserDetailPage({ params }: AdminUserDetailPageProps) {
+  const { id } = await params;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">User Details</h1>
           <p className="text-sm text-slate-500">
-            Viewing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Viewing user: <span className="font-semibold text-slate-800">{id}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={`/admin/users/${params.id}/edit`}
+          href={`/admin/users/${id}/edit`}
         >
           Edit user
         </Link>
