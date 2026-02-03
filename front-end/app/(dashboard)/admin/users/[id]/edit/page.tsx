@@ -5,22 +5,23 @@ import Card, { CardBody, CardHeader } from "@/app/(dashboard)/_components/Card";
 import Input from "@/app/(dashboard)/_components/Input";
 
 type AdminUserEditPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
+export default async function AdminUserEditPage({ params }: AdminUserEditPageProps) {
+  const { id } = await params;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Edit User</h1>
           <p className="text-sm text-slate-500">
-            Editing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Editing user: <span className="font-semibold text-slate-800">{id}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={`/admin/users/${params.id}`}
+          href={`/admin/users/${id}`}
         >
           Back to profile
         </Link>
