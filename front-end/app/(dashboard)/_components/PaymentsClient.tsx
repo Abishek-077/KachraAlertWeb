@@ -279,6 +279,7 @@ export default function PaymentsClient() {
   };
 
   const handlePay = async (invoiceId: string) => {
+    if (isViewingAsAdmin) return;
     if (payingId) return;
 
     const inv = invoices.find((i) => i.id === invoiceId);
@@ -459,7 +460,7 @@ export default function PaymentsClient() {
     }
   };
 
-  const payNowDisabled = !due || payingId !== null;
+  const payNowDisabled = !due || payingId !== null || isViewingAsAdmin;
 
   const getBadgeColor = (status: string) => {
     switch (status) {
@@ -655,7 +656,11 @@ export default function PaymentsClient() {
                     isEditableAmount && savingId !== inv.id && parsedDraft !== null && parsedDraft !== inv.amountNPR;
 
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
-                  const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
+                  const canPay =
+                    !isViewingAsAdmin &&
+                    inv.status !== "Paid" &&
+                    payingId !== inv.id &&
+                    !!payAmount;
 
                   const resident = users.find((user) => user.id === inv.userId);
                   return (
@@ -741,17 +746,19 @@ export default function PaymentsClient() {
                           </button>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              disabled={!canPay}
-                              onClick={(e: any) => {
-                                e?.preventDefault?.();
-                                void handlePay(inv.id);
-                              }}
-                              className="px-3 py-1 text-xs font-semibold rounded-lg bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
-                            >
-                              {payingId === inv.id ? "Paying..." : "Pay"}
-                            </button>
+                            {!isViewingAsAdmin ? (
+                              <button
+                                type="button"
+                                disabled={!canPay}
+                                onClick={(e: any) => {
+                                  e?.preventDefault?.();
+                                  void handlePay(inv.id);
+                                }}
+                                className="px-3 py-1 text-xs font-semibold rounded-lg bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+                              >
+                                {payingId === inv.id ? "Paying..." : "Pay"}
+                              </button>
+                            ) : null}
                             {isAdmin ? (
                               <button
                                 type="button"
