@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CreditCard, Receipt } from "lucide-react";
+
 import { useRole } from "./useRole";
 import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
@@ -141,6 +142,7 @@ export default function PaymentsClient() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingLateFeeId, setSavingLateFeeId] = useState<string | null>(null);
 
+  // Load invoices
   useEffect(() => {
     let cancelled = false;
 
@@ -190,7 +192,41 @@ export default function PaymentsClient() {
     };
 
     void loadInvoices();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, authLoading, invoicesPath, isDemoMode]);
 
+  // Load users (only when admin view)
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      if (!isViewingAsAdmin) return;
+      if (authLoading) return;
+
+      if (!accessToken && !isDemoMode) {
+        if (!cancelled) setUsers([]);
+        return;
+      }
+
+      try {
+        const response = await apiGet("/api/v1/admin/users");
+        const list = unwrapList<AdminUserApi>(response);
+
+        if (cancelled) return;
+
+        setUsers(list);
+        if (list.length && !createPayload.userId) {
+          setCreatePayload((prev) => ({ ...prev, userId: list[0].id }));
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) setUsers([]);
+      }
+    };
+
+    void loadUsers();
     return () => {
       cancelled = true;
     };
@@ -234,20 +270,12 @@ export default function PaymentsClient() {
   }, [accessToken, authLoading, createPayload.userId, isDemoMode, isViewingAsAdmin]);
 
   const due = useMemo(() => invoices.find((i) => i.status !== "Paid"), [invoices]);
+  const paidCount = useMemo(() => invoices.filter((i) => i.status === "Paid").length, [invoices]);
 
-  const paidCount = useMemo(
-    () => invoices.filter((i) => i.status === "Paid").length,
-    [invoices]
-  );
-
-  const dueDraftAmount = due
-    ? parsePositiveAmount(draftAmounts[due.id] ?? String(due.amountNPR))
-    : null;
+  const dueDraftAmount = due ? parsePositiveAmount(draftAmounts[due.id] ?? String(due.amountNPR)) : null;
 
   const markInvoicePaidOptimistic = (invoiceId: string) => {
-    setInvoices((prev) =>
-      prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: "Paid" } : inv))
-    );
+    setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: "Paid" } : inv)));
   };
 
   const handlePay = async (invoiceId: string) => {
@@ -263,16 +291,11 @@ export default function PaymentsClient() {
 
     setPayingId(invoiceId);
     try {
-      const response = await apiPost(`/api/v1/invoices/${invoiceId}/pay`, {
-        amountNPR: amountToPay,
-      });
-
+      const response = await apiPost(`/api/v1/invoices/${invoiceId}/pay`, { amountNPR: amountToPay });
       const updated = unwrapItem<InvoiceApi>(response);
 
       if (updated) {
-        setInvoices((prev) =>
-          prev.map((row) => (row.id === invoiceId ? { ...row, status: updated.status } : row))
-        );
+        setInvoices((prev) => prev.map((row) => (row.id === invoiceId ? { ...row, status: updated.status } : row)));
       } else if (isDemoMode) {
         markInvoicePaidOptimistic(invoiceId);
       }
@@ -294,7 +317,6 @@ export default function PaymentsClient() {
 
   const handleSaveAmount = async (invoiceId: string) => {
     if (!isAdmin) return;
-
     if (savingId) return;
 
     const inv = invoices.find((i) => i.id === invoiceId);
@@ -308,31 +330,20 @@ export default function PaymentsClient() {
 
     setSavingId(invoiceId);
     try {
-      const response = await apiPatch(`/api/v1/invoices/${invoiceId}/amount`, {
-        amountNPR: nextAmount,
-      });
-
+      const response = await apiPatch(`/api/v1/invoices/${invoiceId}/amount`, { amountNPR: nextAmount });
       const updated = unwrapItem<InvoiceApi>(response);
 
       if (updated) {
-        setInvoices((prev) =>
-          prev.map((row) =>
-            row.id === invoiceId ? { ...row, amountNPR: updated.amountNPR } : row
-          )
-        );
+        setInvoices((prev) => prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: updated.amountNPR } : row)));
         setDraftAmounts((prev) => ({ ...prev, [invoiceId]: String(updated.amountNPR) }));
       } else if (isDemoMode) {
-        setInvoices((prev) =>
-          prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: nextAmount } : row))
-        );
+        setInvoices((prev) => prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: nextAmount } : row)));
         setDraftAmounts((prev) => ({ ...prev, [invoiceId]: String(nextAmount) }));
       }
     } catch (error) {
       console.error(error);
       if (isDemoMode) {
-        setInvoices((prev) =>
-          prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: nextAmount } : row))
-        );
+        setInvoices((prev) => prev.map((row) => (row.id === invoiceId ? { ...row, amountNPR: nextAmount } : row)));
         setDraftAmounts((prev) => ({ ...prev, [invoiceId]: String(nextAmount) }));
       }
     } finally {
@@ -462,8 +473,7 @@ export default function PaymentsClient() {
   };
 
   return (
-    <div className="space-y-6 p-6 max-w-6xl mx-auto">
-      {/* Header Card */}
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="rounded-2xl border border-slate-200 bg-white shadow">
         <div className="border-b border-slate-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -474,12 +484,12 @@ export default function PaymentsClient() {
             <button
               type="button"
               disabled={payNowDisabled}
-              onClick={(e: any) => {
-                e?.preventDefault?.();
+              onClick={(e) => {
+                e.preventDefault();
                 if (!due) return;
                 void handlePay(due.id);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CreditCard size={18} />
               {payingId && due?.id === payingId ? "Paying..." : "Pay now"}
@@ -487,7 +497,7 @@ export default function PaymentsClient() {
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
           {isAdmin ? (
             <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
               {isViewingAsAdmin
@@ -577,26 +587,20 @@ export default function PaymentsClient() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Current status</div>
-                  <div className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {due ? "Due" : "Paid"}
-                  </div>
+                  <div className="mt-1 text-2xl font-extrabold text-slate-900">{due ? "Due" : "Paid"}</div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
                   <CheckCircle2 size={18} />
                 </div>
               </div>
-              <div className="mt-2 text-sm text-slate-600">
-                {due ? `Pay ${due.period} invoice to avoid late fees.` : "Thanks! You're all set."}
-              </div>
+              <div className="mt-2 text-sm text-slate-600">{due ? `Pay ${due.period} invoice to avoid late fees.` : "Thanks! You're all set."}</div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Amount due</div>
-                  <div className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}
-                  </div>
+                  <div className="mt-1 text-2xl font-extrabold text-slate-900">{due ? `NPR ${dueDraftAmount ?? due.amountNPR}` : "NPR 0"}</div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                   <CreditCard size={18} />
@@ -615,15 +619,12 @@ export default function PaymentsClient() {
                   <Receipt size={18} />
                 </div>
               </div>
-              <div className="mt-2 text-sm text-slate-600">
-                Download invoices & receipts (coming soon).
-              </div>
+              <div className="mt-2 text-sm text-slate-600">Download invoices & receipts (coming soon).</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Invoices Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow">
         <div className="border-b border-slate-200 px-6 py-4">
           <h3 className="text-lg font-bold text-slate-900">Invoices</h3>
@@ -651,10 +652,7 @@ export default function PaymentsClient() {
                   const parsedDraft = parsePositiveAmount(draftValue);
 
                   const canSave =
-                    isEditableAmount &&
-                    savingId !== inv.id &&
-                    parsedDraft !== null &&
-                    parsedDraft !== inv.amountNPR;
+                    isEditableAmount && savingId !== inv.id && parsedDraft !== null && parsedDraft !== inv.amountNPR;
 
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
                   const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
@@ -667,6 +665,10 @@ export default function PaymentsClient() {
                         <td className="px-6 py-3 text-sm text-slate-600">
                           {resident ? `${resident.name}` : inv.userId.slice(0, 8)}
                         </td>
+                      ) : null}
+
+                      {isViewingAsAdmin ? (
+                        <td className="px-6 py-3 text-sm text-slate-600">{resident ? resident.name : inv.userId.slice(0, 8)}</td>
                       ) : null}
 
                       <td className="px-6 py-3">
@@ -683,11 +685,11 @@ export default function PaymentsClient() {
                             <button
                               type="button"
                               disabled={!canSave}
-                              onClick={(e: any) => {
-                                e?.preventDefault?.();
+                              onClick={(e) => {
+                                e.preventDefault();
                                 void handleSaveAmount(inv.id);
                               }}
-                              className="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                              className="rounded-lg bg-slate-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {savingId === inv.id ? "Saving..." : "Update"}
                             </button>
@@ -702,7 +704,7 @@ export default function PaymentsClient() {
                       </td>
 
                       <td className="px-6 py-3">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getBadgeColor(inv.status)}`}>
+                        <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${getBadgeColor(inv.status)}`}>
                           {inv.status}
                         </span>
                         {isAdmin && inv.status !== "Paid" ? (
@@ -733,7 +735,7 @@ export default function PaymentsClient() {
                           <button
                             type="button"
                             disabled
-                            className="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 cursor-not-allowed"
+                            className="cursor-not-allowed rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
                           >
                             Receipt
                           </button>
