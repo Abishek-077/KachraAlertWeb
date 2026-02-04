@@ -197,41 +197,6 @@ export default function PaymentsClient() {
     };
   }, [accessToken, authLoading, invoicesPath, isDemoMode]);
 
-  // Load users (only when admin view)
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadUsers = async () => {
-      if (!isViewingAsAdmin) return;
-      if (authLoading) return;
-
-      if (!accessToken && !isDemoMode) {
-        if (!cancelled) setUsers([]);
-        return;
-      }
-
-      try {
-        const response = await apiGet("/api/v1/admin/users");
-        const list = unwrapList<AdminUserApi>(response);
-
-        if (cancelled) return;
-
-        setUsers(list);
-        if (list.length && !createPayload.userId) {
-          setCreatePayload((prev) => ({ ...prev, userId: list[0].id }));
-        }
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) setUsers([]);
-      }
-    };
-
-    void loadUsers();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, authLoading, invoicesPath, isDemoMode]);
-
   useEffect(() => {
     let cancelled = false;
 
