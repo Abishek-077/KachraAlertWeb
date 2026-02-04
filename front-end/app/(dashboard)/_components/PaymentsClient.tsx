@@ -1,10 +1,11 @@
 "use client";
+// NOTE: keep this directive as the first statement (no merge-conflict markers above).
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CreditCard, Receipt } from "lucide-react";
 
 import { useRole } from "./useRole";
-import { apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type InvoiceItem = {
@@ -33,6 +34,7 @@ type AdminUserApi = {
   id: string;
   name: string;
   email: string;
+  accountType?: "resident" | "admin_driver";
   lateFeePercent?: number;
 };
 
@@ -116,7 +118,6 @@ function parsePositiveAmount(value: string): number | null {
 export default function PaymentsClient() {
   const { role, actualRole } = useRole();
   const { accessToken, loading: authLoading } = useAuth();
-
   const isAdmin = actualRole === "admin";
   const isViewingAsAdmin = role === "admin";
   const isDemoMode = !baseUrl;
@@ -125,17 +126,16 @@ export default function PaymentsClient() {
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [users, setUsers] = useState<AdminUserApi[]>([]);
+  const [residentOptions, setResidentOptions] = useState<AdminUserApi[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-
   const [createPayload, setCreatePayload] = useState({
     userId: "",
     period: "",
     amountNPR: "",
     dueAt: "",
-    lateFeePercent: "",
+    lateFeePercent: ""
   });
-
   const [payingId, setPayingId] = useState<string | null>(null);
   const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
   const [draftLateFees, setDraftLateFees] = useState<Record<string, string>>({});
@@ -148,14 +148,12 @@ export default function PaymentsClient() {
 
     const loadInvoices = async () => {
       if (authLoading) return;
-
       if (!accessToken && !isDemoMode) {
         setInvoices([]);
         setDraftAmounts({});
         setDraftLateFees({});
         return;
       }
-
       try {
         const response = await apiGet(invoicesPath);
         const list = unwrapList<InvoiceApi>(response);
@@ -170,7 +168,6 @@ export default function PaymentsClient() {
           for (const inv of mapped) next[inv.id] = String(inv.amountNPR);
           return next;
         });
-
         setDraftLateFees((prev) => {
           const next: Record<string, string> = { ...prev };
           for (const inv of mapped) next[inv.id] = String(inv.lateFeePercent ?? 0);
@@ -182,8 +179,10 @@ export default function PaymentsClient() {
 
         if (isDemoMode) {
           setInvoices(demoInvoices);
-          setDraftAmounts(Object.fromEntries(demoInvoices.map((inv) => [inv.id, String(inv.amountNPR)])));
-          setDraftLateFees(Object.fromEntries(demoInvoices.map((inv) => [inv.id, String(inv.lateFeePercent ?? 0)])));
+          setDraftAmounts(
+            Object.fromEntries(demoInvoices.map((inv) => [inv.id, String(inv.amountNPR)]))
+          );
+          setDraftLateFees({});
         } else {
           setInvoices([]);
           setDraftAmounts({});
@@ -228,6 +227,43 @@ export default function PaymentsClient() {
     };
 
     void loadUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, authLoading, invoicesPath, isDemoMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      if (!isViewingAsAdmin) return;
+      if (authLoading) return;
+      if (!accessToken && !isDemoMode) {
+        if (!cancelled) setUsers([]);
+        return;
+      }
+      try {
+        const response = await apiGet("/api/v1/admin/users");
+        const list = unwrapList<AdminUserApi>(response);
+        if (!cancelled) {
+          setUsers(list);
+          const residents = list.filter((user) => user.accountType !== "admin_driver");
+          setResidentOptions(residents);
+          if (residents.length && !createPayload.userId) {
+            setCreatePayload((prev) => ({ ...prev, userId: residents[0].id }));
+          }
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setUsers([]);
+          setResidentOptions([]);
+        }
+      }
+    };
+
+    void loadUsers();
+
     return () => {
       cancelled = true;
     };
@@ -328,9 +364,10 @@ export default function PaymentsClient() {
 
     setSavingLateFeeId(invoiceId);
     try {
-      const response = await apiPatch(`/api/v1/invoices/${invoiceId}/late-fee`, { lateFeePercent: nextPercent });
+      const response = await apiPatch(`/api/v1/invoices/${invoiceId}/late-fee`, {
+        lateFeePercent: nextPercent,
+      });
       const updated = unwrapItem<InvoiceApi>(response);
-
       if (updated) {
         setInvoices((prev) =>
           prev.map((row) =>
@@ -341,8 +378,8 @@ export default function PaymentsClient() {
                   lateFeePercent: updated.lateFeePercent ?? 0,
                   status: updated.status,
                 }
-              : row,
-          ),
+              : row
+          )
         );
         setDraftLateFees((prev) => ({ ...prev, [invoiceId]: String(updated.lateFeePercent ?? 0) }));
       }
@@ -355,16 +392,16 @@ export default function PaymentsClient() {
 
   const handleCreateInvoice = async () => {
     if (!isViewingAsAdmin || creating) return;
-
     setCreateError(null);
-
     const amount = parsePositiveAmount(createPayload.amountNPR);
     if (!createPayload.userId || !createPayload.period || !amount || !createPayload.dueAt) {
       setCreateError("Fill in resident, period, amount, and due date.");
       return;
     }
 
-    const lateFeePercent = createPayload.lateFeePercent ? Number(createPayload.lateFeePercent) : 0;
+    const lateFeePercent = createPayload.lateFeePercent
+      ? Number(createPayload.lateFeePercent)
+      : 0;
     if (!Number.isFinite(lateFeePercent) || lateFeePercent < 0 || lateFeePercent > 100) {
       setCreateError("Late fee must be between 0 and 100.");
       return;
@@ -379,15 +416,19 @@ export default function PaymentsClient() {
         dueAt: new Date(createPayload.dueAt).toISOString(),
         lateFeePercent,
       });
-
       const created = unwrapItem<InvoiceApi>(response);
-
       if (created) {
         const mapped = mapInvoice(created);
         setInvoices((prev) => [mapped, ...prev]);
         setDraftAmounts((prev) => ({ ...prev, [mapped.id]: String(mapped.amountNPR) }));
         setDraftLateFees((prev) => ({ ...prev, [mapped.id]: String(mapped.lateFeePercent) }));
-        setCreatePayload((prev) => ({ ...prev, period: "", amountNPR: "", dueAt: "", lateFeePercent: "" }));
+        setCreatePayload((prev) => ({
+          ...prev,
+          period: "",
+          amountNPR: "",
+          dueAt: "",
+          lateFeePercent: "",
+        }));
       } else if (isDemoMode) {
         const mapped: InvoiceItem = {
           id: `demo-${Date.now()}`,
@@ -402,7 +443,13 @@ export default function PaymentsClient() {
         setInvoices((prev) => [mapped, ...prev]);
         setDraftAmounts((prev) => ({ ...prev, [mapped.id]: String(mapped.amountNPR) }));
         setDraftLateFees((prev) => ({ ...prev, [mapped.id]: String(mapped.lateFeePercent) }));
-        setCreatePayload((prev) => ({ ...prev, period: "", amountNPR: "", dueAt: "", lateFeePercent: "" }));
+        setCreatePayload((prev) => ({
+          ...prev,
+          period: "",
+          amountNPR: "",
+          dueAt: "",
+          lateFeePercent: "",
+        }));
       }
     } catch (error) {
       console.error(error);
@@ -462,57 +509,60 @@ export default function PaymentsClient() {
           {isViewingAsAdmin ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="text-sm font-semibold text-slate-800">Create invoice</div>
-
-              {users.length === 0 ? (
+              {residentOptions.length === 0 ? (
                 <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
                   No residents found yet. Create a resident account before issuing invoices.
                 </div>
               ) : null}
-
               <div className="mt-3 grid gap-3 md:grid-cols-5">
                 <select
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   value={createPayload.userId}
-                  onChange={(event) => setCreatePayload((prev) => ({ ...prev, userId: event.target.value }))}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, userId: event.target.value }))
+                  }
                 >
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} · {u.email}
+                  {residentOptions.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} · {user.email}
                     </option>
                   ))}
                 </select>
-
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   placeholder="Period (e.g. Jan 2026)"
                   value={createPayload.period}
-                  onChange={(event) => setCreatePayload((prev) => ({ ...prev, period: event.target.value }))}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, period: event.target.value }))
+                  }
                 />
-
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   placeholder="Amount (NPR)"
                   inputMode="numeric"
                   value={createPayload.amountNPR}
-                  onChange={(event) => setCreatePayload((prev) => ({ ...prev, amountNPR: event.target.value }))}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, amountNPR: event.target.value }))
+                  }
                 />
-
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   type="date"
                   value={createPayload.dueAt}
-                  onChange={(event) => setCreatePayload((prev) => ({ ...prev, dueAt: event.target.value }))}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, dueAt: event.target.value }))
+                  }
                 />
-
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   placeholder="Late fee %"
                   inputMode="numeric"
                   value={createPayload.lateFeePercent}
-                  onChange={(event) => setCreatePayload((prev) => ({ ...prev, lateFeePercent: event.target.value }))}
+                  onChange={(event) =>
+                    setCreatePayload((prev) => ({ ...prev, lateFeePercent: event.target.value }))
+                  }
                 />
               </div>
-
               <div className="mt-3 flex justify-end">
                 <button
                   type="button"
@@ -520,14 +570,15 @@ export default function PaymentsClient() {
                     event.preventDefault();
                     void handleCreateInvoice();
                   }}
-                  disabled={creating || users.length === 0}
+                  disabled={creating}
                   className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {creating ? "Creating..." : "Create invoice"}
                 </button>
               </div>
-
-              {createError ? <div className="mt-3 text-xs text-red-600">{createError}</div> : null}
+              {createError ? (
+                <div className="mt-3 text-xs text-red-600">{createError}</div>
+              ) : null}
             </div>
           ) : null}
 
@@ -606,11 +657,15 @@ export default function PaymentsClient() {
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
                   const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
 
-                  const resident = isViewingAsAdmin ? users.find((u) => u.id === inv.userId) : null;
-
+                  const resident = users.find((user) => user.id === inv.userId);
                   return (
                     <tr key={inv.id} className="border-t border-slate-200 bg-white hover:bg-slate-50">
                       <td className="px-6 py-3 font-semibold text-slate-900">{inv.period}</td>
+                      {isViewingAsAdmin ? (
+                        <td className="px-6 py-3 text-sm text-slate-600">
+                          {resident ? `${resident.name}` : inv.userId.slice(0, 8)}
+                        </td>
+                      ) : null}
 
                       {isViewingAsAdmin ? (
                         <td className="px-6 py-3 text-sm text-slate-600">{resident ? resident.name : inv.userId.slice(0, 8)}</td>
@@ -644,13 +699,14 @@ export default function PaymentsClient() {
                         )}
                       </td>
 
-                      <td className="px-6 py-3 text-sm text-slate-600">{new Date(inv.dueISO).toLocaleDateString()}</td>
+                      <td className="px-6 py-3 text-sm text-slate-600">
+                        {new Date(inv.dueISO).toLocaleDateString()}
+                      </td>
 
                       <td className="px-6 py-3">
                         <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${getBadgeColor(inv.status)}`}>
                           {inv.status}
                         </span>
-
                         {isAdmin && inv.status !== "Paid" ? (
                           <div className="mt-2 flex items-center gap-2">
                             <input
@@ -684,17 +740,36 @@ export default function PaymentsClient() {
                             Receipt
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            disabled={!canPay}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              void handlePay(inv.id);
-                            }}
-                            className="rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {payingId === inv.id ? "Paying..." : "Pay"}
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              disabled={!canPay}
+                              onClick={(e: any) => {
+                                e?.preventDefault?.();
+                                void handlePay(inv.id);
+                              }}
+                              className="px-3 py-1 text-xs font-semibold rounded-lg bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+                            >
+                              {payingId === inv.id ? "Paying..." : "Pay"}
+                            </button>
+                            {isAdmin ? (
+                              <button
+                                type="button"
+                                onClick={async (e: any) => {
+                                  e?.preventDefault?.();
+                                  try {
+                                    await apiDelete(`/api/v1/invoices/${inv.id}`);
+                                    setInvoices((prev) => prev.filter((row) => row.id !== inv.id));
+                                  } catch (error) {
+                                    console.error(error);
+                                  }
+                                }}
+                                className="px-3 py-1 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            ) : null}
+                          </div>
                         )}
                       </td>
                     </tr>

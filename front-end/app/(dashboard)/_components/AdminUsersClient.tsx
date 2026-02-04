@@ -45,7 +45,6 @@ export default function AdminUsersClient() {
 
   useEffect(() => {
     if (authLoading) return;
-
     if (!accessToken) {
       setUsers([]);
       setLoading(false);
@@ -55,11 +54,9 @@ export default function AdminUsersClient() {
     const loadUsers = async () => {
       setLoading(true);
       setErrorMessage(null);
-
       try {
         const response = await apiGet<AdminUserApi[]>("/api/v1/admin/users");
-
-        const mapped: AdminUser[] =
+        const mapped =
           response.data?.map((user) => ({
             id: user.id,
             name: user.name,
@@ -68,9 +65,8 @@ export default function AdminUsersClient() {
             status: user.isBanned ? "Banned" : "Active",
             society: user.society,
             building: user.building,
-            apartment: user.apartment,
+            apartment: user.apartment
           })) ?? [];
-
         setUsers(mapped);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -80,7 +76,7 @@ export default function AdminUsersClient() {
       }
     };
 
-    void loadUsers();
+    loadUsers();
   }, [accessToken, authLoading]);
 
   const filteredUsers = useMemo(() => {
@@ -89,7 +85,7 @@ export default function AdminUsersClient() {
 
     return users.filter((user) =>
       [user.id, user.name, user.email, user.role, user.society, user.building, user.apartment].some((value) =>
-        String(value ?? "").toLowerCase().includes(normalizedQuery),
+        value.toLowerCase().includes(normalizedQuery),
       ),
     );
   }, [query, users]);
@@ -100,10 +96,9 @@ export default function AdminUsersClient() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-
     try {
       await apiDelete(`/api/v1/admin/users/${deleteTarget.id}`);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      setUsers((prev) => prev.filter((user) => user.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (error) {
       const apiError = error as ApiError | undefined;

@@ -26,16 +26,12 @@ type AdminUserApi = {
 
 export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
   const { accessToken, loading: authLoading } = useAuth();
-  const id = params.id;
-
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
     if (authLoading) return;
-
     if (!accessToken) {
       setLoading(false);
       return;
@@ -44,9 +40,8 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
     const loadUser = async () => {
       setLoading(true);
       setErrorMessage(null);
-
       try {
-        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${id}`);
+        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${params.id}`);
         setUser(response.data ?? null);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -56,8 +51,8 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
       }
     };
 
-    void loadUser();
-  }, [accessToken, authLoading, id]);
+    loadUser();
+  }, [accessToken, authLoading, params.id]);
 
   return (
     <div className="space-y-6">
@@ -81,7 +76,9 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
           Loading user details...
         </div>
       ) : errorMessage ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">{errorMessage}</div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
+          {errorMessage}
+        </div>
       ) : user ? (
         <>
           <Card>

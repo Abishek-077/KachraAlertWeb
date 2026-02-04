@@ -12,5 +12,6 @@ router.get("/all", requireAuth, requireAdmin, invoicesController.listAllInvoices
 router.post("/", requireAuth, requireAdmin, validateBody(createInvoiceSchema), invoicesController.createInvoice);
 router.patch("/:id/amount", requireAuth, requireAdmin, validateBody(updateInvoiceAmountSchema), invoicesController.updateInvoiceAmount);
 router.patch("/:id/late-fee", requireAuth, requireAdmin, validateBody(updateInvoiceLateFeeSchema), invoicesController.applyInvoiceLateFee);
+router.delete("/:id", requireAuth, requireAdmin, invoicesController.deleteInvoice);
 
 export default router;

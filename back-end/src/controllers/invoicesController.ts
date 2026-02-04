@@ -153,3 +153,16 @@ export async function applyInvoiceLateFee(req: AuthRequest, res: Response, next:
     return next(err);
   }
 }
+
+export async function deleteInvoice(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      throw new AppError("Invoice not found", 404, "NOT_FOUND");
+    }
+    await invoice.deleteOne();
+    return sendSuccess(res, "Invoice deleted");
+  } catch (err) {
+    return next(err);
+  }
+}
