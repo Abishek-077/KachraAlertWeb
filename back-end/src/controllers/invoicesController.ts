@@ -12,12 +12,18 @@ function mapInvoice(invoice: InvoiceDocument) {
     amountNPR: invoice.amountNPR,
     status: invoice.status,
     issuedAt: invoice.issuedAt,
-    dueAt: invoice.dueAt
+    dueAt: invoice.dueAt,
+    lateFeePercent: invoice.lateFeePercent ?? 0,
+    userId: invoice.userId.toString()
   };
 }
 
 export async function listInvoices(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    await Invoice.updateMany(
+      { status: "Due", dueAt: { $lt: new Date() } },
+      { $set: { status: "Overdue" } }
+    );
     const invoices = await Invoice.find({ userId: req.user!.id }).sort({ issuedAt: -1 });
     return sendSuccess(res, "Invoices loaded", invoices.map(mapInvoice));
   } catch (err) {
@@ -27,6 +33,10 @@ export async function listInvoices(req: AuthRequest, res: Response, next: NextFu
 
 export async function listAllInvoices(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    await Invoice.updateMany(
+      { status: "Due", dueAt: { $lt: new Date() } },
+      { $set: { status: "Overdue" } }
+    );
     const invoices = await Invoice.find().sort({ issuedAt: -1 });
     return sendSuccess(res, "All invoices loaded", invoices.map(mapInvoice));
   } catch (err) {
@@ -44,7 +54,8 @@ export async function createInvoice(req: AuthRequest, res: Response, next: NextF
       amountNPR: req.body.amountNPR,
       status: req.body.status ?? "Due",
       issuedAt,
-      dueAt
+      dueAt,
+      lateFeePercent: req.body.lateFeePercent ?? 0
     });
     return sendSuccess(res, "Invoice created", mapInvoice(invoice));
   } catch (err) {
@@ -112,6 +123,45 @@ export async function updateInvoiceAmount(req: AuthRequest, res: Response, next:
     await invoice.save();
 
     return sendSuccess(res, "Invoice amount updated", mapInvoice(invoice));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function applyInvoiceLateFee(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      throw new AppError("Invoice not found", 404, "NOT_FOUND");
+    }
+
+    if (invoice.status === "Paid") {
+      throw new AppError("Paid invoices cannot be modified", 400, "INVOICE_LOCKED");
+    }
+
+    const percent = req.body.lateFeePercent as number;
+    const multiplier = 1 + percent / 100;
+    invoice.amountNPR = Math.round(invoice.amountNPR * multiplier);
+    invoice.lateFeePercent = percent;
+    if (invoice.dueAt < new Date() && invoice.status === "Due") {
+      invoice.status = "Overdue";
+    }
+    await invoice.save();
+
+    return sendSuccess(res, "Late fee applied", mapInvoice(invoice));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function deleteInvoice(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      throw new AppError("Invoice not found", 404, "NOT_FOUND");
+    }
+    await invoice.deleteOne();
+    return sendSuccess(res, "Invoice deleted");
   } catch (err) {
     return next(err);
   }

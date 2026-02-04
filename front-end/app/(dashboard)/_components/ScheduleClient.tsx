@@ -10,6 +10,7 @@ import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import { apiDelete, apiGet, apiPatch, apiPost, type ApiError } from "@/app/lib/api";
+import { useAuth } from "@/app/lib/auth-context";
 import { useRole } from "./useRole";
 
 type ScheduleApi = {
@@ -31,6 +32,7 @@ const statusOptions: ScheduleItem["status"][] = ["Upcoming", "Completed", "Misse
 
 export default function ScheduleClient() {
   const { role } = useRole();
+  const { accessToken, loading: authLoading } = useAuth();
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -42,6 +44,11 @@ export default function ScheduleClient() {
   const [scheduleUnavailable, setScheduleUnavailable] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!accessToken) {
+      setItems([]);
+      return;
+    }
     const isNotFound = (error: unknown) => (error as ApiError | undefined)?.status === 404;
 
     const loadSchedule = async () => {
@@ -66,7 +73,7 @@ export default function ScheduleClient() {
       }
     };
     loadSchedule();
-  }, []);
+  }, [accessToken, authLoading]);
 
   const days = useMemo(() => {
     const start = new Date();
