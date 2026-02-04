@@ -197,41 +197,6 @@ export default function PaymentsClient() {
     };
   }, [accessToken, authLoading, invoicesPath, isDemoMode]);
 
-  // Load users (only when admin view)
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadUsers = async () => {
-      if (!isViewingAsAdmin) return;
-      if (authLoading) return;
-
-      if (!accessToken && !isDemoMode) {
-        if (!cancelled) setUsers([]);
-        return;
-      }
-
-      try {
-        const response = await apiGet("/api/v1/admin/users");
-        const list = unwrapList<AdminUserApi>(response);
-
-        if (cancelled) return;
-
-        setUsers(list);
-        if (list.length && !createPayload.userId) {
-          setCreatePayload((prev) => ({ ...prev, userId: list[0].id }));
-        }
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) setUsers([]);
-      }
-    };
-
-    void loadUsers();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, authLoading, invoicesPath, isDemoMode]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -279,6 +244,7 @@ export default function PaymentsClient() {
   };
 
   const handlePay = async (invoiceId: string) => {
+    if (isViewingAsAdmin) return;
     if (payingId) return;
 
     const inv = invoices.find((i) => i.id === invoiceId);
@@ -459,7 +425,7 @@ export default function PaymentsClient() {
     }
   };
 
-  const payNowDisabled = !due || payingId !== null;
+  const payNowDisabled = !due || payingId !== null || isViewingAsAdmin;
 
   const getBadgeColor = (status: string) => {
     switch (status) {
@@ -655,7 +621,11 @@ export default function PaymentsClient() {
                     isEditableAmount && savingId !== inv.id && parsedDraft !== null && parsedDraft !== inv.amountNPR;
 
                   const payAmount = isAdmin ? parsedDraft : inv.amountNPR;
-                  const canPay = inv.status !== "Paid" && payingId !== inv.id && !!payAmount;
+                  const canPay =
+                    !isViewingAsAdmin &&
+                    inv.status !== "Paid" &&
+                    payingId !== inv.id &&
+                    !!payAmount;
 
                   const resident = users.find((user) => user.id === inv.userId);
                   return (
@@ -741,17 +711,19 @@ export default function PaymentsClient() {
                           </button>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              disabled={!canPay}
-                              onClick={(e: any) => {
-                                e?.preventDefault?.();
-                                void handlePay(inv.id);
-                              }}
-                              className="px-3 py-1 text-xs font-semibold rounded-lg bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
-                            >
-                              {payingId === inv.id ? "Paying..." : "Pay"}
-                            </button>
+                            {!isViewingAsAdmin ? (
+                              <button
+                                type="button"
+                                disabled={!canPay}
+                                onClick={(e: any) => {
+                                  e?.preventDefault?.();
+                                  void handlePay(inv.id);
+                                }}
+                                className="px-3 py-1 text-xs font-semibold rounded-lg bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+                              >
+                                {payingId === inv.id ? "Paying..." : "Pay"}
+                              </button>
+                            ) : null}
                             {isAdmin ? (
                               <button
                                 type="button"
