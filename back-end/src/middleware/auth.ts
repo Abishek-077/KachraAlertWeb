@@ -29,7 +29,7 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
 }
 
 export function requireAdmin(req: AuthRequest, _res: Response, next: NextFunction) {
-  if (req.user?.accountType !== "admin_driver") {
+  if (req.user?.accountType !== "admin_driver" && req.user?.accountType !== "admin") {
     return next(new AppError("Admin access required", 403, "FORBIDDEN"));
   }
   return next();

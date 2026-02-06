@@ -63,7 +63,7 @@ function clearAuthCookies() {
 
 export type AuthUser = {
   id: string;
-  accountType: "resident" | "admin_driver";
+  accountType: "resident" | "admin_driver" | "admin";
   name: string;
   email: string;
   phone: string;

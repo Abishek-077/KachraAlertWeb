@@ -1,10 +1,11 @@
 import type { UserDocument } from "../models/User.js";
 import { buildProfileImageUrl } from "./userProfileImage.js";
+import { normalizeAccountType } from "./accountType.js";
 
 export function mapUser(user: UserDocument) {
   return {
     id: user._id.toString(),
-    accountType: user.accountType,
+    accountType: normalizeAccountType(user.accountType),
     name: user.name,
     email: user.email,
     phone: user.phone,

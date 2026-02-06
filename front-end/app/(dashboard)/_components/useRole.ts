@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/app/lib/auth-context";
 
 export type UserRole = "resident" | "admin";
-export type AccountType = "resident" | "admin_driver";
+export type AccountType = "resident" | "admin_driver" | "admin";
 
 const ROLE_OVERRIDE_KEY = "ka_role_override";
 
@@ -19,7 +19,7 @@ export function useRole(): UseRoleResult {
   const { user } = useAuth();
   const accountType: AccountType = user?.accountType ?? "resident";
   const actualRole = useMemo<UserRole>(() => {
-    if (accountType === "admin_driver") return "admin";
+    if (accountType === "admin_driver" || accountType === "admin") return "admin";
     return "resident";
   }, [accountType]);
   const [roleOverride, setRoleOverride] = useState<UserRole | null>(null);

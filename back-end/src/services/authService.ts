@@ -9,6 +9,7 @@ import { hashToken, generateRandomToken, timingSafeEqual } from "../utils/crypto
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { v4 as uuidv4 } from "uuid";
 import { buildProfileImageUrl } from "../utils/userProfileImage.js";
+import { normalizeAccountType } from "../utils/accountType.js";
 import type { UserDocument } from "../models/User.js";
 
 const PASSWORD_SALT_ROUNDS = 12;
@@ -184,7 +185,7 @@ async function issueTokens(
     refreshToken,
     user: {
       id: user._id.toString(),
-      accountType: user.accountType,
+      accountType: normalizeAccountType(user.accountType),
       name: user.name,
       email: user.email,
       phone: user.phone,

@@ -68,12 +68,12 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">User Details</h1>
           <p className="text-sm text-slate-500">
-            Viewing user: <span className="font-semibold text-slate-800">{id}</span>
+            Viewing user: <span className="font-semibold text-slate-800">{params.id}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={id ? `/admin/users/${id}/edit` : "/admin/users"}
+          href={params.id ? `/admin/users/${params.id}/edit` : "/admin/users"}
         >
           Edit user
         </Link>

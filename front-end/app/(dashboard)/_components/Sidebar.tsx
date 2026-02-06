@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileText,
   Bell,
+  MessageSquare,
   Shield,
   Settings,
   LogOut,
@@ -27,6 +28,7 @@ const baseNav = [
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
 const adminNav = [
