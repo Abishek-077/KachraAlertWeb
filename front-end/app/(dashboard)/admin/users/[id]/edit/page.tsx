@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 
 import Button from "@/app/(dashboard)/_components/Button";
@@ -10,7 +10,7 @@ import { apiGet, type ApiError } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type AdminUserEditPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 type AdminUserApi = {
@@ -25,6 +25,7 @@ type AdminUserApi = {
 };
 
 export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
+  const { id: userId } = use(params);
   const { accessToken, loading: authLoading } = useAuth();
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${params.id}`);
+        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${userId}`);
         setUser(response.data ?? null);
       } catch (error) {
         const apiError = error as ApiError | undefined;
@@ -52,7 +53,7 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
     };
 
     loadUser();
-  }, [accessToken, authLoading, params.id]);
+  }, [accessToken, authLoading, userId]);
 
   return (
     <div className="space-y-6">
@@ -60,12 +61,12 @@ export default function AdminUserEditPage({ params }: AdminUserEditPageProps) {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Edit User</h1>
           <p className="text-sm text-slate-500">
-            Editing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Editing user: <span className="font-semibold text-slate-800">{userId}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={params.id ? `/admin/users/${params.id}` : "/admin/users"}
+          href={userId ? `/admin/users/${userId}` : "/admin/users"}
         >
           Back to profile
         </Link>

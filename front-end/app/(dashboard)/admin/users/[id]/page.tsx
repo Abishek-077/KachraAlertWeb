@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 
 import Badge from "@/app/(dashboard)/_components/Badge";
@@ -10,7 +10,7 @@ import { apiGet, apiPatch, type ApiError } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type AdminUserDetailPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 type AdminUserApi = {
@@ -27,6 +27,7 @@ type AdminUserApi = {
 };
 
 export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps) {
+  const { id: userId } = use(params);
   const { accessToken, loading: authLoading } = useAuth();
   const [user, setUser] = useState<AdminUserApi | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
       setLoading(true);
       setErrorMessage(null);
       try {
-        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${params.id}`);
+        const response = await apiGet<AdminUserApi>(`/api/v1/admin/users/${userId}`);
         const payload = response.data ?? null;
         setUser(payload);
         if (payload) {
@@ -60,7 +61,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
     };
 
     loadUser();
-  }, [accessToken, authLoading, params.id]);
+  }, [accessToken, authLoading, userId]);
 
   return (
     <div className="space-y-6">
@@ -68,12 +69,12 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">User Details</h1>
           <p className="text-sm text-slate-500">
-            Viewing user: <span className="font-semibold text-slate-800">{params.id}</span>
+            Viewing user: <span className="font-semibold text-slate-800">{userId}</span>
           </p>
         </div>
         <Link
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          href={params.id ? `/admin/users/${params.id}/edit` : "/admin/users"}
+          href={userId ? `/admin/users/${userId}/edit` : "/admin/users"}
         >
           Edit user
         </Link>
@@ -157,7 +158,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                         setSavingStatus(true);
                         try {
                           const response = await apiPatch<AdminUserApi>(
-                            `/api/v1/admin/users/${params.id}/status`,
+                            `/api/v1/admin/users/${userId}/status`,
                             { isBanned: !user.isBanned }
                           );
                           if (response.data) {
@@ -204,7 +205,7 @@ export default function AdminUserDetailPage({ params }: AdminUserDetailPageProps
                         setSavingStatus(true);
                         try {
                           const response = await apiPatch<AdminUserApi>(
-                            `/api/v1/admin/users/${params.id}/status`,
+                            `/api/v1/admin/users/${userId}/status`,
                             { lateFeePercent: nextPercent }
                           );
                           if (response.data) {
