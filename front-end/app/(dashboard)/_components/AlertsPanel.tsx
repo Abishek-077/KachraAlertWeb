@@ -1,6 +1,5 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Info, Siren, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
@@ -9,6 +8,7 @@ import Badge from "./Badge";
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import { useAlerts } from "@/app/lib/alerts-context";
+import AuthorMeta from "./AuthorMeta";
 
 function iconForSeverity(sev: "info" | "warning" | "urgent") {
   if (sev === "urgent") return <Siren size={16} />;
@@ -55,8 +55,8 @@ export default function AlertsPanel() {
                   </div>
                   <div className="mt-2 font-extrabold">{a.title}</div>
                   <div className="mt-1 text-sm text-slate-600">{a.body}</div>
-                  <div className="mt-2 text-xs text-slate-500">
-                    {formatDistanceToNow(new Date(a.createdISO), { addSuffix: true })}
+                  <div className="mt-2">
+                    <AuthorMeta author={a.createdBy} createdISO={a.createdISO} />
                   </div>
                 </div>
                 <button

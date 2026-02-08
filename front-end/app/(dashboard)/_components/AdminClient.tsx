@@ -9,6 +9,7 @@ import Input from "./Input";
 import Badge from "./Badge";
 import { apiDelete, apiGet, apiPost } from "@/app/lib/api";
 import type { AlertItem } from "../../../lib/types";
+import AuthorMeta from "./AuthorMeta";
 
 type QueueItem = {
   id: string;
@@ -38,6 +39,11 @@ export default function AdminClient() {
     severity: AlertItem["severity"];
     createdAt: string;
     read: boolean;
+    createdBy?: {
+      id: string;
+      name: string;
+      profileImageUrl: string | null;
+    };
   };
 
   useEffect(() => {
@@ -51,7 +57,8 @@ export default function AdminClient() {
             body: alert.body,
             createdISO: alert.createdAt,
             severity: alert.severity,
-            read: alert.read
+            read: alert.read,
+            createdBy: alert.createdBy
           })) ?? [];
         setAlerts(mapped);
       } catch (error) {
@@ -164,15 +171,17 @@ export default function AdminClient() {
                           body: msg.trim(),
                           severity: "info"
                         });
-                        if (response.data) {
+                        const createdAlert = response.data;
+                        if (createdAlert) {
                           setAlerts((prev) => [
                             {
-                              id: response.data.id,
-                              title: response.data.title,
-                              body: response.data.body,
-                              createdISO: response.data.createdAt,
-                              severity: response.data.severity,
-                              read: response.data.read
+                              id: createdAlert.id,
+                              title: createdAlert.title,
+                              body: createdAlert.body,
+                              createdISO: createdAlert.createdAt,
+                              severity: createdAlert.severity,
+                              read: createdAlert.read,
+                              createdBy: createdAlert.createdBy
                             },
                             ...prev
                           ]);
@@ -205,7 +214,8 @@ export default function AdminClient() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="font-extrabold">{alert.title}</div>
+                          <AuthorMeta author={alert.createdBy} createdISO={alert.createdISO} />
+                          <div className="mt-2 font-extrabold">{alert.title}</div>
                           <div className="mt-1 text-sm text-slate-600">{alert.body}</div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">

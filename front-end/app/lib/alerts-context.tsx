@@ -14,6 +14,11 @@ type AlertApi = {
   createdAt: string;
   read: boolean;
   target: string;
+  createdBy?: {
+    id: string;
+    name: string;
+    profileImageUrl: string | null;
+  };
 };
 
 type AlertsContextValue = {
@@ -34,7 +39,8 @@ function formatAlert(alert: AlertApi): AlertItem {
     body: alert.body,
     severity: alert.severity,
     createdISO: alert.createdAt,
-    read: alert.read
+    read: alert.read,
+    createdBy: alert.createdBy
   };
 }
 

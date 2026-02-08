@@ -13,6 +13,7 @@ import TodaySchedule from "../_components/TodaySchedule";
 import Card, { CardBody, CardHeader } from "../_components/Card";
 import Badge from "../_components/Badge";
 import Button from "../_components/Button";
+import AuthorMeta from "../_components/AuthorMeta";
 import { apiGet, baseUrl, type ApiError } from "@/app/lib/api";
 import type { ReportItem, InvoiceItem, ScheduleItem } from "../../../lib/types";
 import { useAlerts } from "@/app/lib/alerts-context";
@@ -41,7 +42,8 @@ export default function DashboardPage() {
             category: report.category,
             priority: report.priority,
             status: report.status,
-            createdISO: report.createdAt
+            createdISO: report.createdAt,
+            createdBy: report.createdBy
           })) ?? [];
         setReports(mapped);
       } catch (error) {
@@ -139,7 +141,8 @@ export default function DashboardPage() {
                 {reports.slice(0, 4).map((r) => (
                   <div key={r.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
                     <div className="min-w-0">
-                      <div className="font-extrabold truncate">{r.title}</div>
+                      <AuthorMeta author={r.createdBy} createdISO={r.createdISO} />
+                      <div className="mt-2 font-extrabold truncate">{r.title}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                         <Badge tone="slate">{r.category}</Badge>
                         <Badge tone={r.priority === "High" ? "red" : r.priority === "Medium" ? "amber" : "blue"}>{r.priority}</Badge>

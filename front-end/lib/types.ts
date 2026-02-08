@@ -8,6 +8,12 @@ export type ScheduleItem = {
   status: "Upcoming" | "Completed" | "Missed";
 };
 
+export type FeedUser = {
+  id: string;
+  name: string;
+  profileImageUrl: string | null;
+};
+
 export type AlertItem = {
   id: string;
   title: string;
@@ -15,6 +21,7 @@ export type AlertItem = {
   createdISO: string;
   severity: "info" | "warning" | "urgent";
   read: boolean;
+  createdBy?: FeedUser;
 };
 
 export type ReportItem = {
@@ -24,6 +31,7 @@ export type ReportItem = {
   createdISO: string;
   status: "Open" | "In Progress" | "Resolved";
   priority: "Low" | "Medium" | "High";
+  createdBy?: FeedUser;
   attachments?: {
     id: string;
     originalName: string;

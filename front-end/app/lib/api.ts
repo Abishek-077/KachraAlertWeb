@@ -22,6 +22,31 @@ export function getAccessToken() {
   return accessToken;
 }
 
+function createApiError(
+  message: string,
+  options: {
+    status?: number;
+    errorCode?: string;
+  } = {}
+): ApiError {
+  return Object.assign(new Error(message), options);
+}
+
+async function extractErrorMessage(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+    if (payload?.message) {
+      return payload.message;
+    }
+  }
+  const text = (await response.text().catch(() => "")).trim();
+  if (text) {
+    return text;
+  }
+  return response.statusText || "Request failed";
+}
+
 function resolveApiUrl(path: string) {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
@@ -59,16 +84,16 @@ async function request<T>(path: string, options: RequestInit = {}) {
         data: undefined
       } as ApiResponse<T>;
     }
-    const error = new Error(response.statusText || "Request failed") as ApiError;
-    error.status = response.status;
-    throw error;
+    throw createApiError(await extractErrorMessage(response), {
+      status: response.status
+    });
   }
 
   if (!response.ok || !payload.success) {
-    const error = new Error(payload.message ?? "Request failed") as ApiError;
-    error.errorCode = payload.errorCode;
-    error.status = response.status;
-    throw error;
+    throw createApiError(payload.message ?? "Request failed", {
+      status: response.status,
+      errorCode: payload.errorCode
+    });
   }
 
   return payload;
@@ -108,9 +133,9 @@ export async function apiGetBlob(path: string) {
     credentials: "include"
   });
   if (!response.ok) {
-    const error = new Error(response.statusText || "Request failed") as ApiError;
-    error.status = response.status;
-    throw error;
+    throw createApiError(await extractErrorMessage(response), {
+      status: response.status
+    });
   }
   return response.blob();
 }

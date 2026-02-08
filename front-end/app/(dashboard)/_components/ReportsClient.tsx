@@ -10,6 +10,7 @@ import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
 import Modal from "./Modal";
 import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost } from "@/app/lib/api";
+import AuthorMeta from "./AuthorMeta";
 
 function statusTone(s: ReportItem["status"]) {
   if (s === "Resolved") return "emerald";
@@ -40,6 +41,11 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
     priority: ReportItem["priority"];
     status: ReportItem["status"];
     createdAt: string;
+    createdBy?: {
+      id: string;
+      name: string;
+      profileImageUrl: string | null;
+    };
     attachments?: {
       id: string;
       originalName: string;
@@ -64,6 +70,7 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
             priority: report.priority,
             status: report.status,
             createdISO: report.createdAt,
+            createdBy: report.createdBy,
             attachments: report.attachments ?? []
           })) ?? [];
         setItems(mapped);
@@ -78,15 +85,42 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
     if (attachmentFetchingId) return;
     setAttachmentFetchingId(attachmentItem.id);
     const shouldPreview = attachmentItem.mimeType.startsWith("image/");
-    const previewWindow = shouldPreview ? window.open("", "_blank", "noopener,noreferrer") : null;
+    const previewWindow = shouldPreview ? window.open("", "_blank") : null;
+    if (previewWindow) {
+      previewWindow.document.title = "Loading attachment...";
+      previewWindow.document.body.innerHTML = "";
+      const loading = previewWindow.document.createElement("main");
+      loading.style.fontFamily = "system-ui,sans-serif";
+      loading.style.padding = "20px";
+      loading.style.color = "#0f172a";
+      loading.textContent = "Loading attachment...";
+      previewWindow.document.body.appendChild(loading);
+    }
     try {
       const blob = await apiGetBlob(attachmentItem.url);
       const objectUrl = URL.createObjectURL(blob);
       if (shouldPreview) {
         if (previewWindow) {
-          previewWindow.location.href = objectUrl;
+          previewWindow.document.title = attachmentItem.originalName;
+          previewWindow.document.body.innerHTML = "";
+          previewWindow.document.body.style.margin = "0";
+          previewWindow.document.body.style.background = "#020617";
+          previewWindow.document.body.style.display = "grid";
+          previewWindow.document.body.style.placeItems = "center";
+
+          const image = previewWindow.document.createElement("img");
+          image.src = objectUrl;
+          image.alt = attachmentItem.originalName;
+          image.style.maxWidth = "100vw";
+          image.style.maxHeight = "100vh";
+          image.style.objectFit = "contain";
+          previewWindow.document.body.appendChild(image);
+
+          // Keep object URL alive longer so large images can finish loading in the new tab.
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         } else {
-          window.open(objectUrl, "_blank", "noopener,noreferrer");
+          window.open(objectUrl, "_blank");
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         }
       } else {
         const link = document.createElement("a");
@@ -95,12 +129,33 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 5_000);
       }
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error) {
       console.error(error);
       if (previewWindow) {
-        previewWindow.close();
+        const message = error instanceof Error ? error.message : "Unable to open attachment.";
+        previewWindow.document.title = "Attachment error";
+        previewWindow.document.body.innerHTML = "";
+        const container = previewWindow.document.createElement("main");
+        container.style.fontFamily = "system-ui,sans-serif";
+        container.style.padding = "20px";
+        container.style.color = "#0f172a";
+
+        const heading = previewWindow.document.createElement("h2");
+        heading.style.margin = "0 0 10px 0";
+        heading.style.fontSize = "18px";
+        heading.textContent = "Could not load attachment";
+
+        const details = previewWindow.document.createElement("p");
+        details.style.margin = "0";
+        details.style.fontSize = "14px";
+        details.style.color = "#475569";
+        details.textContent = message;
+
+        container.appendChild(heading);
+        container.appendChild(details);
+        previewWindow.document.body.appendChild(container);
       }
     } finally {
       setAttachmentFetchingId(null);
@@ -127,7 +182,8 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
                 className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4"
               >
                 <div className="min-w-0">
-                  <div className="truncate font-extrabold">{r.title}</div>
+                  <AuthorMeta author={r.createdBy} createdISO={r.createdISO} />
+                  <div className="mt-2 truncate font-extrabold">{r.title}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                     <Badge tone="slate">{r.category}</Badge>
                     <Badge tone={r.priority === "High" ? "red" : r.priority === "Medium" ? "amber" : "blue"}>
@@ -314,6 +370,7 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
                       createdISO: response.data.createdAt,
                       status: response.data.status,
                       priority: response.data.priority,
+                      createdBy: response.data.createdBy,
                       attachments: response.data.attachments ?? []
                     };
                     setItems((prev) => [next, ...prev]);
