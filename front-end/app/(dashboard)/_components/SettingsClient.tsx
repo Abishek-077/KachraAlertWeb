@@ -25,8 +25,8 @@ export default function SettingsClient() {
   const [saving, setSaving] = useState(false);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [profileImageUploading, setProfileImageUploading] = useState(false);
-  const previousProfileImageUrl = useRef<string | null>(null);
   const profileImageObjectUrl = useRef<string | null>(null);
+  const [profileImageRevision, setProfileImageRevision] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -43,7 +43,8 @@ export default function SettingsClient() {
   useEffect(() => {
     let isActive = true;
     const loadProfileImage = async () => {
-      if (!user?.profileImageUrl) {
+      const profileImageUrl = user?.profileImageUrl ? `${user.profileImageUrl}?v=${profileImageRevision}` : null;
+      if (!profileImageUrl) {
         if (profileImageObjectUrl.current) {
           URL.revokeObjectURL(profileImageObjectUrl.current);
         }
@@ -51,18 +52,15 @@ export default function SettingsClient() {
         if (isActive) {
           setProfileImagePreview(null);
         }
-        previousProfileImageUrl.current = null;
         return;
       }
-      if (previousProfileImageUrl.current === user.profileImageUrl) return;
       try {
-        const blob = await apiGetBlob(user.profileImageUrl);
+        const blob = await apiGetBlob(profileImageUrl);
         const objectUrl = URL.createObjectURL(blob);
         if (profileImageObjectUrl.current) {
           URL.revokeObjectURL(profileImageObjectUrl.current);
         }
         profileImageObjectUrl.current = objectUrl;
-        previousProfileImageUrl.current = user.profileImageUrl;
         if (isActive) {
           setProfileImagePreview(objectUrl);
         }
@@ -74,7 +72,7 @@ export default function SettingsClient() {
     return () => {
       isActive = false;
     };
-  }, [user?.profileImageUrl]);
+  }, [user?.profileImageUrl, profileImageRevision]);
 
   useEffect(() => {
     return () => {
@@ -203,6 +201,7 @@ export default function SettingsClient() {
                           }
                         });
                         await refresh();
+                        setProfileImageRevision((prev) => prev + 1);
                       } catch (error) {
                         console.error(error);
                       } finally {
