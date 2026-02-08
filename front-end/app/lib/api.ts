@@ -140,30 +140,16 @@ export async function apiGetBlob(path: string) {
   if (accessToken) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
-<<<<<<< HEAD
   const response = await fetch(resolveApiUrl(path), {
-=======
-  const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
-  const response = await fetch(url, {
->>>>>>> Sprint-3
     method: "GET",
     headers,
     cache: "no-store",
     credentials: "include"
   });
   if (!response.ok) {
-<<<<<<< HEAD
     throw createApiError(await extractErrorMessage(response), {
       status: response.status
     });
-=======
-    if (response.status === 404) {
-      return null;
-    }
-    const error = new Error(response.statusText || "Request failed") as ApiError;
-    error.status = response.status;
-    throw error;
->>>>>>> Sprint-3
   }
   return response.blob();
 }
