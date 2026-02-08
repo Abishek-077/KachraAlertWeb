@@ -83,10 +83,13 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
       const blob = await apiGetBlob(attachmentItem.url);
       const objectUrl = URL.createObjectURL(blob);
       if (shouldPreview) {
-        if (previewWindow) {
-          previewWindow.location.href = objectUrl;
+        const targetWindow = previewWindow ?? window.open("", "_blank", "noopener,noreferrer");
+        if (targetWindow) {
+          targetWindow.location.href = objectUrl;
+          targetWindow.addEventListener("beforeunload", () => URL.revokeObjectURL(objectUrl), { once: true });
         } else {
           window.open(objectUrl, "_blank", "noopener,noreferrer");
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
         }
       } else {
         const link = document.createElement("a");
@@ -95,8 +98,8 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       }
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error) {
       console.error(error);
       if (previewWindow) {
