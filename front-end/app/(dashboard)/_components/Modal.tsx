@@ -33,7 +33,7 @@ export default function Modal({
               onClick={onClose}
               aria-label="Close"
             >
-              ✕
+              x
             </button>
           </div>
           <div className="px-5 py-4">{children}</div>

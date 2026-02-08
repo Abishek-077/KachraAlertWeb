@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, User, ChevronDown } from "lucide-react";
+import { Bell, Search, User, ChevronDown, MessageSquare } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -72,6 +72,13 @@ export default function Topbar() {
           </div>
         )}
 
+        <button
+          className="relative rounded-xl border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
+          aria-label="Messages"
+          onClick={() => router.push("/messages")}
+        >
+          <MessageSquare size={18} />
+        </button>
         <button
           className="relative rounded-xl border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
           aria-label="Notifications"

@@ -98,6 +98,10 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
     }
     try {
       const blob = await apiGetBlob(attachmentItem.url);
+      if (!blob) {
+        console.warn("Attachment not found");
+        return;
+      }
       const objectUrl = URL.createObjectURL(blob);
       if (shouldPreview) {
         if (previewWindow) {

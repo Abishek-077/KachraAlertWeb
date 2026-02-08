@@ -55,7 +55,22 @@ export default function SettingsClient() {
         return;
       }
       try {
+<<<<<<< HEAD
         const blob = await apiGetBlob(profileImageUrl);
+=======
+        const blob = await apiGetBlob(user.profileImageUrl);
+        if (!blob) {
+          if (profileImageObjectUrl.current) {
+            URL.revokeObjectURL(profileImageObjectUrl.current);
+          }
+          profileImageObjectUrl.current = null;
+          previousProfileImageUrl.current = user.profileImageUrl;
+          if (isActive) {
+            setProfileImagePreview(null);
+          }
+          return;
+        }
+>>>>>>> Sprint-3
         const objectUrl = URL.createObjectURL(blob);
         if (profileImageObjectUrl.current) {
           URL.revokeObjectURL(profileImageObjectUrl.current);

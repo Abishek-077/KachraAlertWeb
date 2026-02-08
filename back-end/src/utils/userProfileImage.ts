@@ -3,12 +3,19 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { fileURLToPath } from "url";
 
+<<<<<<< HEAD
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDir = path.dirname(currentFilePath);
 const backendRootDir = path.resolve(currentDir, "..", "..");
 
 export const profileUploadsDir = path.resolve(backendRootDir, "uploads", "profiles");
 export const legacyProfileUploadsDir = path.resolve(process.cwd(), "uploads", "profiles");
+=======
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const uploadsRoot = path.resolve(currentDir, "../../uploads");
+
+export const profileUploadsDir = path.join(uploadsRoot, "profiles");
+>>>>>>> Sprint-3
 
 fs.mkdirSync(profileUploadsDir, { recursive: true });
 
@@ -16,6 +23,12 @@ type IncomingProfileImage = {
   name: string;
   mimeType: string;
   dataBase64: string;
+};
+
+type IncomingProfileImageFile = {
+  originalname: string;
+  mimetype: string;
+  buffer: Buffer;
 };
 
 export function writeProfileImage(image: IncomingProfileImage) {
@@ -29,6 +42,20 @@ export function writeProfileImage(image: IncomingProfileImage) {
     originalName: image.name,
     mimeType: image.mimeType,
     size: buffer.length,
+    uploadedAt: new Date()
+  };
+}
+
+export function writeProfileImageFile(image: IncomingProfileImageFile) {
+  const ext = path.extname(image.originalname);
+  const filename = `${Date.now()}-${randomUUID()}${ext}`;
+  const filePath = path.join(profileUploadsDir, filename);
+  fs.writeFileSync(filePath, image.buffer);
+  return {
+    filename,
+    originalName: image.originalname,
+    mimeType: image.mimetype,
+    size: image.buffer.length,
     uploadedAt: new Date()
   };
 }

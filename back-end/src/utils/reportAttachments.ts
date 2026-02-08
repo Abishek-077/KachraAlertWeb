@@ -3,12 +3,19 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { fileURLToPath } from "url";
 
+<<<<<<< HEAD
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDir = path.dirname(currentFilePath);
 const backendRootDir = path.resolve(currentDir, "..", "..");
 
 export const reportUploadsDir = path.resolve(backendRootDir, "uploads", "reports");
 export const legacyReportUploadsDir = path.resolve(process.cwd(), "uploads", "reports");
+=======
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const uploadsRoot = path.resolve(currentDir, "../../uploads");
+
+export const reportUploadsDir = path.join(uploadsRoot, "reports");
+>>>>>>> Sprint-3
 
 fs.mkdirSync(reportUploadsDir, { recursive: true });
 
