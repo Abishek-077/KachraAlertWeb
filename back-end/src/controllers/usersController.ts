@@ -3,17 +3,13 @@ import { User } from "../models/User.js";
 import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../utils/errors.js";
 import type { AuthRequest } from "../middleware/auth.js";
-<<<<<<< HEAD
 import {
-  buildProfileImageUrl,
   legacyProfileUploadsDir,
   profileUploadsDir,
-  writeProfileImage
+  writeProfileImage,
+  writeProfileImageFile
 } from "../utils/userProfileImage.js";
-=======
-import { profileUploadsDir, writeProfileImage, writeProfileImageFile } from "../utils/userProfileImage.js";
 import { mapUser } from "../utils/userMapper.js";
->>>>>>> Sprint-3
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
