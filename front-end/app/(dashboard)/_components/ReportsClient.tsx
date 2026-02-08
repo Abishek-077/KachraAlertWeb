@@ -77,11 +77,20 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
   const openAttachment = async (attachmentItem: NonNullable<ReportItem["attachments"]>[number]) => {
     if (attachmentFetchingId) return;
     setAttachmentFetchingId(attachmentItem.id);
+    const shouldPreview = attachmentItem.mimeType.startsWith("image/");
+    const previewWindow = shouldPreview ? window.open("", "_blank", "noopener,noreferrer") : null;
     try {
       const blob = await apiGetBlob(attachmentItem.url);
       const objectUrl = URL.createObjectURL(blob);
-      if (attachmentItem.mimeType.startsWith("image/")) {
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
+      if (shouldPreview) {
+        const targetWindow = previewWindow ?? window.open("", "_blank", "noopener,noreferrer");
+        if (targetWindow) {
+          targetWindow.location.href = objectUrl;
+          targetWindow.addEventListener("beforeunload", () => URL.revokeObjectURL(objectUrl), { once: true });
+        } else {
+          window.open(objectUrl, "_blank", "noopener,noreferrer");
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        }
       } else {
         const link = document.createElement("a");
         link.href = objectUrl;
@@ -89,10 +98,13 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       }
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error) {
       console.error(error);
+      if (previewWindow) {
+        previewWindow.close();
+      }
     } finally {
       setAttachmentFetchingId(null);
     }
