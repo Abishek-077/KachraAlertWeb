@@ -22,6 +22,13 @@ export function getAccessToken() {
   return accessToken;
 }
 
+function resolveApiUrl(path: string) {
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  return `${baseUrl}${path}`;
+}
+
 async function request<T>(path: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
@@ -31,7 +38,7 @@ async function request<T>(path: string, options: RequestInit = {}) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(resolveApiUrl(path), {
     ...options,
     headers,
     credentials: "include"
@@ -94,9 +101,10 @@ export async function apiGetBlob(path: string) {
   if (accessToken) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(resolveApiUrl(path), {
     method: "GET",
     headers,
+    cache: "no-store",
     credentials: "include"
   });
   if (!response.ok) {

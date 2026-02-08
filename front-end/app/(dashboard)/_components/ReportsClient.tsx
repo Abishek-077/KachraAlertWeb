@@ -77,11 +77,17 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
   const openAttachment = async (attachmentItem: NonNullable<ReportItem["attachments"]>[number]) => {
     if (attachmentFetchingId) return;
     setAttachmentFetchingId(attachmentItem.id);
+    const shouldPreview = attachmentItem.mimeType.startsWith("image/");
+    const previewWindow = shouldPreview ? window.open("", "_blank", "noopener,noreferrer") : null;
     try {
       const blob = await apiGetBlob(attachmentItem.url);
       const objectUrl = URL.createObjectURL(blob);
-      if (attachmentItem.mimeType.startsWith("image/")) {
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
+      if (shouldPreview) {
+        if (previewWindow) {
+          previewWindow.location.href = objectUrl;
+        } else {
+          window.open(objectUrl, "_blank", "noopener,noreferrer");
+        }
       } else {
         const link = document.createElement("a");
         link.href = objectUrl;
@@ -93,6 +99,9 @@ export default function ReportsClient({ initial }: { initial: ReportItem[] }) {
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error) {
       console.error(error);
+      if (previewWindow) {
+        previewWindow.close();
+      }
     } finally {
       setAttachmentFetchingId(null);
     }
