@@ -13,6 +13,7 @@ export type ApiError = Error & {
 export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 let accessToken: string | null = null;
+let refreshInFlight: Promise<boolean> | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -47,6 +48,46 @@ async function extractErrorMessage(response: Response) {
   return response.statusText || "Request failed";
 }
 
+function isAuthPath(path: string) {
+  return path.includes("/api/v1/auth/");
+}
+
+async function refreshAccessToken() {
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+
+  refreshInFlight = (async () => {
+    try {
+      const response = await fetch(resolveApiUrl("/api/v1/auth/refresh"), {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      if (!response.ok) {
+        setAccessToken(null);
+        return false;
+      }
+      const payload = (await response.json().catch(() => null)) as ApiResponse<{
+        accessToken: string | null;
+      }> | null;
+      const nextToken = payload?.data?.accessToken ?? null;
+      setAccessToken(nextToken);
+      return Boolean(nextToken);
+    } catch {
+      setAccessToken(null);
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
 function resolveApiUrl(path: string) {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
@@ -63,11 +104,27 @@ async function request<T>(path: string, options: RequestInit = {}) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const response = await fetch(resolveApiUrl(path), {
+  let response = await fetch(resolveApiUrl(path), {
     ...options,
     headers,
     credentials: "include"
   });
+
+  if (response.status === 401 && !isAuthPath(path)) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      if (accessToken) {
+        headers.set("Authorization", `Bearer ${accessToken}`);
+      } else {
+        headers.delete("Authorization");
+      }
+      response = await fetch(resolveApiUrl(path), {
+        ...options,
+        headers,
+        credentials: "include"
+      });
+    }
+  }
 
   const contentType = response.headers.get("content-type") ?? "";
   let payload: ApiResponse<T> | null = null;
@@ -140,12 +197,28 @@ export async function apiGetBlob(path: string) {
   if (accessToken) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
-  const response = await fetch(resolveApiUrl(path), {
+  let response = await fetch(resolveApiUrl(path), {
     method: "GET",
     headers,
     cache: "no-store",
     credentials: "include"
   });
+  if (response.status === 401 && !isAuthPath(path)) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      if (accessToken) {
+        headers.set("Authorization", `Bearer ${accessToken}`);
+      } else {
+        headers.delete("Authorization");
+      }
+      response = await fetch(resolveApiUrl(path), {
+        method: "GET",
+        headers,
+        cache: "no-store",
+        credentials: "include"
+      });
+    }
+  }
   if (!response.ok) {
     throw createApiError(await extractErrorMessage(response), {
       status: response.status
