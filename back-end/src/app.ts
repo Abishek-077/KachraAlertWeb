@@ -39,6 +39,14 @@ app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 
+app.get("/", (_req, res) => {
+  res.json({
+    success: true,
+    message: "KachraAlert API is running",
+    health: "/api/v1/health"
+  });
+});
+
 app.get("/api/v1/health", (_req, res) => {
   res.json({ success: true, message: "OK" });
 });
