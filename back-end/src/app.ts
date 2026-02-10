@@ -14,8 +14,14 @@ import messagesRoutes from "./routes/messagesRoutes.js";
 import serviceRatingsRoutes from "./routes/serviceRatingsRoutes.js";
 import { errorHandler } from "./middleware/error.js";
 import { isAllowedCorsOrigin } from "./utils/origin.js";
+import { env } from "./config/env.js";
 
 const app = express();
+
+if (env.nodeEnv === "production") {
+  // Respect X-Forwarded-* headers when running behind a reverse proxy.
+  app.set("trust proxy", 1);
+}
 
 app.use(helmet());
 app.use(
@@ -31,7 +37,7 @@ app.use(
 );
 app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());
-app.use(morgan("dev"));
+app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 
 app.get("/api/v1/health", (_req, res) => {
   res.json({ success: true, message: "OK" });
