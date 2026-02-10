@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import {
     Bell,
     CalendarDays,
@@ -26,7 +27,74 @@ const features = [
 
 const pulseBars = [28, 36, 26, 54, 48, 88, 82, 104];
 
+const TARGET_SCORE = 67;
+const TARGET_CYCLE = 56;
+const TARGET_ALERTS = 387;
+const TARGET_PRECISION = 82;
+
+function easeOutCubic(t: number) {
+    return 1 - Math.pow(1 - t, 3);
+}
+
 export default function PublicHomePage() {
+    const stabilitySectionRef = useRef<HTMLElement | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const hasAnimatedRef = useRef(false);
+    const [metricProgress, setMetricProgress] = useState(0);
+
+    useEffect(() => {
+        const section = stabilitySectionRef.current;
+        if (!section) return;
+
+        const runMetricAnimation = () => {
+            const durationMs = 1800;
+            const startedAt = performance.now();
+
+            const tick = (now: number) => {
+                const elapsed = now - startedAt;
+                const rawProgress = Math.min(1, elapsed / durationMs);
+                const eased = easeOutCubic(rawProgress);
+                setMetricProgress(eased);
+
+                if (rawProgress < 1) {
+                    rafRef.current = window.requestAnimationFrame(tick);
+                } else {
+                    rafRef.current = null;
+                }
+            };
+
+            if (rafRef.current) {
+                window.cancelAnimationFrame(rafRef.current);
+            }
+            rafRef.current = window.requestAnimationFrame(tick);
+        };
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (!entry?.isIntersecting || hasAnimatedRef.current) return;
+                hasAnimatedRef.current = true;
+                runMetricAnimation();
+                observer.disconnect();
+            },
+            { threshold: 0.35 }
+        );
+
+        observer.observe(section);
+
+        return () => {
+            observer.disconnect();
+            if (rafRef.current) {
+                window.cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, []);
+
+    const score = Math.round(TARGET_SCORE * metricProgress);
+    const cycleComplete = Math.round(TARGET_CYCLE * metricProgress);
+    const activeAlerts = Math.round(TARGET_ALERTS * metricProgress);
+    const routePrecision = Math.round(TARGET_PRECISION * metricProgress);
+
     return (
         <div className="pt-16 animate-fade-in">
             {/* Hero */}
@@ -67,7 +135,10 @@ export default function PublicHomePage() {
             </section>
 
             {/* Stability + Impact Section */}
-            <section className="mx-auto mt-14 grid max-w-[1160px] gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+            <section
+                ref={stabilitySectionRef}
+                className="mx-auto mt-14 grid max-w-[1160px] gap-5 lg:grid-cols-[1.05fr_0.95fr]"
+            >
                 <div className="stability-shell rounded-[1.6rem] border border-slate-200/60 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/80">
                     <div className="flex items-start justify-between gap-4">
                         <div>
@@ -76,7 +147,7 @@ export default function PublicHomePage() {
                         </div>
                         <div className="rounded-[1.3rem] border border-brand-200 bg-brand-50 px-5 py-2 text-brand-700 dark:border-brand-700/50 dark:bg-brand-900/30 dark:text-brand-300">
                             <div className="text-xs font-bold uppercase tracking-[0.08em]">Score</div>
-                            <div className="text-4xl font-black leading-none sm:text-[3.2rem]">67%</div>
+                            <div className="metric-number text-4xl font-black leading-none sm:text-[3.2rem]">{score}%</div>
                         </div>
                     </div>
 
@@ -86,7 +157,7 @@ export default function PublicHomePage() {
                                 key={`pulse-bar-${idx}`}
                                 className="pulse-bar rounded-t-3xl bg-gradient-to-t from-brand-600 via-brand-500 to-cyan-300"
                                 style={{
-                                    height: `${Math.round(barHeight * 0.8)}px`,
+                                    height: `${Math.max(10, Math.round(barHeight * (0.36 + metricProgress * 0.44)))}px`,
                                     animationDelay: `${idx * 120}ms`
                                 }}
                             />
@@ -130,14 +201,18 @@ export default function PublicHomePage() {
                                 <BellRing size={18} />
                                 <span className="text-sm font-semibold">Active alerts</span>
                             </div>
-                            <p className="mt-2 text-4xl font-black leading-none text-slate-900 dark:text-white sm:text-[3.6rem]">387</p>
+                            <p className="metric-number mt-2 text-4xl font-black leading-none text-slate-900 dark:text-white sm:text-[3.6rem]">
+                                {activeAlerts}
+                            </p>
                         </div>
                         <div className="rounded-[1.3rem] border border-slate-200 bg-white/80 p-5 dark:border-slate-700 dark:bg-slate-950/80">
                             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                                 <TrendingUp size={18} />
                                 <span className="text-sm font-semibold">Route precision</span>
                             </div>
-                            <p className="mt-2 text-4xl font-black leading-none text-slate-900 dark:text-white sm:text-[3.6rem]">82%</p>
+                            <p className="metric-number mt-2 text-4xl font-black leading-none text-slate-900 dark:text-white sm:text-[3.6rem]">
+                                {routePrecision}%
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -165,16 +240,16 @@ export default function PublicHomePage() {
                     <div className="mt-6 flex items-center justify-between gap-4 rounded-[1.3rem] border border-white/10 bg-white/5 p-5">
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-[0.30em] text-slate-300">Cycle Complete</p>
-                            <p className="mt-2 text-5xl font-black leading-none sm:text-[4.4rem]">56%</p>
+                            <p className="metric-number mt-2 text-5xl font-black leading-none sm:text-[4.4rem]">{cycleComplete}%</p>
                         </div>
                         <div
                             className="matrix-ring h-28 w-28 rounded-full p-2 sm:h-32 sm:w-32"
                             style={{
-                                background: "conic-gradient(rgb(52 211 153) 56%, rgba(148,163,184,0.25) 56% 100%)"
+                                background: `conic-gradient(rgb(52 211 153) ${cycleComplete}%, rgba(148,163,184,0.25) ${cycleComplete}% 100%)`
                             }}
                         >
                             <div className="flex h-full w-full items-center justify-center rounded-full bg-[#020b2e] text-4xl font-black text-emerald-300 sm:text-5xl">
-                                56
+                                {cycleComplete}
                             </div>
                         </div>
                     </div>
@@ -385,6 +460,11 @@ export default function PublicHomePage() {
                     will-change: transform, filter;
                 }
 
+                .metric-number {
+                    font-variant-numeric: tabular-nums;
+                    animation: metricPulse 1.4s ease-in-out infinite;
+                }
+
                 @keyframes pulseBar {
                     0%, 100% {
                         transform: translateY(0) scaleY(0.94);
@@ -488,6 +568,17 @@ export default function PublicHomePage() {
                     }
                 }
 
+                @keyframes metricPulse {
+                    0%, 100% {
+                        opacity: 0.96;
+                        filter: brightness(0.96);
+                    }
+                    50% {
+                        opacity: 1;
+                        filter: brightness(1.08);
+                    }
+                }
+
                 @media (max-width: 1024px) {
                     .matrix-grid {
                         height: 220px;
@@ -498,6 +589,10 @@ export default function PublicHomePage() {
                     .pulse-bar,
                     .matrix-stream,
                     .matrix-node {
+                        animation: none !important;
+                    }
+
+                    .metric-number {
                         animation: none !important;
                     }
                 }
