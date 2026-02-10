@@ -1,8 +1,8 @@
 import type { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import { env } from "../config/env.js";
 import { verifyAccessToken, type AccessTokenPayload } from "./jwt.js";
 import { sendMessage, type ChatMessage } from "../services/messageService.js";
+import { isAllowedCorsOrigin } from "./origin.js";
 
 let io: Server | null = null;
 
@@ -37,7 +37,12 @@ export function emitChatMessageUpdate(message: ChatMessage) {
 export function initSocket(server: HttpServer) {
   io = new Server(server, {
     cors: {
-      origin: env.frontendUrl,
+      origin(origin, callback) {
+        if (isAllowedCorsOrigin(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"), false);
+      },
       credentials: true
     }
   });

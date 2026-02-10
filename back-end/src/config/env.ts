@@ -14,17 +14,27 @@ function requireEnv(key: string, fallback?: string) {
 type TokenExpiresIn = NonNullable<SignOptions["expiresIn"]>;
 
 const accessTokenTtl = (process.env.ACCESS_TOKEN_TTL ?? "15m") as TokenExpiresIn;
+const frontendUrls = requireEnv("FRONTEND_URL")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+if (frontendUrls.length === 0) {
+  throw new Error("Missing required env var: FRONTEND_URL");
+}
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
-  port: Number(process.env.PORT ?? 4001),
+  port: Number(process.env.PORT ?? 4000),
   mongoUri: requireEnv("MONGODB_URI"),
   jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
   jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
   accessTokenTtl,
   refreshTokenDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 7),
   refreshTokenRememberDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS_REMEMBER ?? 30),
-  frontendUrl: requireEnv("FRONTEND_URL"),
+  frontendUrl: frontendUrls[0],
+  frontendUrls,
+  allowVercelPreviewOrigins: process.env.ALLOW_VERCEL_PREVIEW_ORIGINS === "true",
   cookieDomain: process.env.COOKIE_DOMAIN,
   cookieSecure: process.env.COOKIE_SECURE === "true"
 };

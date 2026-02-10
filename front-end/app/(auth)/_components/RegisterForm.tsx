@@ -18,6 +18,21 @@ type Step1 = RegisterStep1Data;
 
 type Step2 = RegisterStep2Data;
 
+type Step1InputKey = "name" | "email" | "phone";
+type Step2InputKey = "society" | "building" | "apartment";
+
+const step1Fields: Array<{ key: Step1InputKey; label: string; ph: string }> = [
+    { key: "name", label: "Full Name", ph: "John Doe" },
+    { key: "email", label: "Email Address", ph: "you@example.com" },
+    { key: "phone", label: "Phone Number", ph: "98XXXXXXXX" }
+];
+
+const step2Fields: Array<{ key: Step2InputKey; label: string; ph: string }> = [
+    { key: "society", label: "Society", ph: "e.g. Sunshine Society" },
+    { key: "building", label: "Building", ph: "e.g. Block A" },
+    { key: "apartment", label: "Apartment", ph: "e.g. A-12" }
+];
+
 export default function RegisterForm() {
     const [step, setStep] = useState<1 | 2>(1);
     const [show, setShow] = useState(false);
@@ -61,8 +76,8 @@ export default function RegisterForm() {
         try {
             await register(payload);
             router.push("/dashboard");
-        } catch (e: any) {
-            setMessage(e?.message ?? "Register failed");
+        } catch (error: unknown) {
+            setMessage(error instanceof Error ? error.message : "Register failed");
         }
     }
 
@@ -175,23 +190,17 @@ export default function RegisterForm() {
                         </div>
 
                         {/* Fields */}
-                        {[
-                            { key: "name", label: "Full Name", ph: "John Doe" },
-                            { key: "email", label: "Email Address", ph: "you@example.com" },
-                            { key: "phone", label: "Phone Number", ph: "98XXXXXXXX" }
-                        ].map((f) => (
-                            <div key={f.key}>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
+                        {step1Fields.map((field) => (
+                            <div key={field.key}>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{field.label}</label>
                                 <input
                                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-500"
-                                    placeholder={f.ph}
-                                    {...step1Form.register(f.key as keyof Step1)}
+                                    placeholder={field.ph}
+                                    {...step1Form.register(field.key)}
                                 />
-                                {/* @ts-expect-error */}
-                                {step1Form.formState.errors?.[f.key]?.message && (
+                                {step1Form.formState.errors[field.key]?.message && (
                                     <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">
-                                        {/* @ts-expect-error */}
-                                        {step1Form.formState.errors[f.key].message}
+                                        {step1Form.formState.errors[field.key]?.message}
                                     </p>
                                 )}
                             </div>
@@ -242,23 +251,17 @@ export default function RegisterForm() {
                 {/* STEP 2 */}
                 {step === 2 && (
                     <form className="mt-10 space-y-6" onSubmit={step2Form.handleSubmit(submitStep2)}>
-                        {[
-                            { key: "society", label: "Society", ph: "e.g. Sunshine Society" },
-                            { key: "building", label: "Building", ph: "e.g. Block A" },
-                            { key: "apartment", label: "Apartment", ph: "e.g. A-12" }
-                        ].map((f) => (
-                            <div key={f.key}>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
+                        {step2Fields.map((field) => (
+                            <div key={field.key}>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{field.label}</label>
                                 <input
                                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-500"
-                                    placeholder={f.ph}
-                                    {...step2Form.register(f.key as keyof Step2)}
+                                    placeholder={field.ph}
+                                    {...step2Form.register(field.key)}
                                 />
-                                {/* @ts-expect-error */}
-                                {step2Form.formState.errors?.[f.key]?.message && (
+                                {step2Form.formState.errors[field.key]?.message && (
                                     <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">
-                                        {/* @ts-expect-error */}
-                                        {step2Form.formState.errors[f.key].message}
+                                        {step2Form.formState.errors[field.key]?.message}
                                     </p>
                                 )}
                             </div>

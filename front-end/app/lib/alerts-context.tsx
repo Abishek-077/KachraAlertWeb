@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { apiGet, apiPost, baseUrl } from "./api";
+import { apiGet, apiPost, socketBaseUrl } from "./api";
 import { useAuth } from "./auth-context";
 import type { AlertItem } from "../../lib/types";
 
@@ -105,7 +105,7 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const socketEnabled = process.env.NEXT_PUBLIC_ENABLE_SOCKET === "true";
-    if (!accessToken || !socketEnabled || !baseUrl) {
+    if (!accessToken || !socketEnabled || !socketBaseUrl) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -113,7 +113,7 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const socket = io(baseUrl, {
+    const socket = io(socketBaseUrl, {
       auth: { token: accessToken },
       transports: ["websocket"]
     });

@@ -29,8 +29,8 @@ export default function LoginForm() {
         try {
             await login({ email: values.email, password: values.password, remember: values.remember });
             router.push("/dashboard");
-        } catch (e: any) {
-            setMessage(e?.message ?? "Login failed");
+        } catch (error: unknown) {
+            setMessage(error instanceof Error ? error.message : "Login failed");
         }
     }
 

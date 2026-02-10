@@ -8,7 +8,7 @@ import { MessageSquareReply, Pencil, Send, Trash2, X } from "lucide-react";
 import Card, { CardBody, CardHeader } from "./Card";
 import Button from "./Button";
 import Input from "./Input";
-import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost, baseUrl } from "@/app/lib/api";
+import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost, socketBaseUrl } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
 type ChatContact = {
@@ -235,7 +235,7 @@ export default function MessagesClient() {
   }, [accessToken, activeContactId]);
 
   useEffect(() => {
-    if (!accessToken || !baseUrl) {
+    if (!accessToken || !socketBaseUrl) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -243,7 +243,7 @@ export default function MessagesClient() {
       return;
     }
 
-    const socket = io(baseUrl, {
+    const socket = io(socketBaseUrl, {
       auth: { token: accessToken },
       transports: ["websocket"]
     });

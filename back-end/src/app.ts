@@ -13,14 +13,19 @@ import adminUsersRoutes from "./routes/adminUsersRoutes.js";
 import messagesRoutes from "./routes/messagesRoutes.js";
 import serviceRatingsRoutes from "./routes/serviceRatingsRoutes.js";
 import { errorHandler } from "./middleware/error.js";
-import { env } from "./config/env.js";
+import { isAllowedCorsOrigin } from "./utils/origin.js";
 
 const app = express();
 
 app.use(helmet());
 app.use(
   cors({
-    origin: env.frontendUrl,
+    origin(origin, callback) {
+      if (isAllowedCorsOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true
   })
 );

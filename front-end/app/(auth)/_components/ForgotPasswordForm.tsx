@@ -29,8 +29,8 @@ export default function ForgotPasswordForm() {
             if (response.data?.devResetToken) {
                 setDevToken(response.data.devResetToken);
             }
-        } catch (e: any) {
-            setMessage(e?.message ?? "Unable to request reset link");
+        } catch (error: unknown) {
+            setMessage(error instanceof Error ? error.message : "Unable to request reset link");
         }
     }
 

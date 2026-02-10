@@ -10,7 +10,11 @@ export type ApiError = Error & {
   errorCode?: string;
 };
 
-export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+const rawSocketBaseUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? rawApiBaseUrl;
+
+export const baseUrl = rawApiBaseUrl.replace(/\/+$/, "");
+export const socketBaseUrl = rawSocketBaseUrl.replace(/\/+$/, "");
 
 let accessToken: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
@@ -92,7 +96,7 @@ function resolveApiUrl(path: string) {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
-  return `${baseUrl}${path}`;
+  return baseUrl ? `${baseUrl}${path}` : path;
 }
 
 async function request<T>(path: string, options: RequestInit = {}) {

@@ -32,8 +32,8 @@ export default function ResetPasswordForm() {
             });
             setMessage("Password reset successful. Redirecting to login...");
             setTimeout(() => router.push("/login"), 1200);
-        } catch (e: any) {
-            setMessage(e?.message ?? "Unable to reset password");
+        } catch (error: unknown) {
+            setMessage(error instanceof Error ? error.message : "Unable to reset password");
         }
     }
 

@@ -38,9 +38,7 @@ type AdminUserApi = {
   lateFeePercent?: number;
 };
 
-type ApiEnvelope<T> = {
-  success?: boolean;
-  message?: string;
+type ApiEnvelopeLike<T> = {
   data?: T;
 };
 
@@ -91,18 +89,26 @@ function mapInvoice(inv: InvoiceApi): InvoiceItem {
   };
 }
 
-function unwrapList<T>(resp: any): T[] {
-  const payload = resp?.data;
-  if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.data)) return payload.data;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function unwrapList<T>(resp: unknown): T[] {
+  if (!isRecord(resp)) return [];
+
+  const payload = resp.data;
+  if (Array.isArray(payload)) return payload as T[];
+  if (isRecord(payload) && Array.isArray(payload.data)) return payload.data as T[];
   return [];
 }
 
-function unwrapItem<T>(resp: any): T | null {
-  const payload = resp?.data;
+function unwrapItem<T>(resp: unknown): T | null {
+  if (!isRecord(resp)) return null;
+
+  const payload = resp.data;
   if (!payload) return null;
-  if (payload && typeof payload === "object" && "data" in payload) {
-    return (payload as ApiEnvelope<T>).data ?? null;
+  if (isRecord(payload) && "data" in payload) {
+    return (payload as ApiEnvelopeLike<T>).data ?? null;
   }
   return payload as T;
 }
@@ -715,8 +721,7 @@ export default function PaymentsClient() {
                               <button
                                 type="button"
                                 disabled={!canPay}
-                                onClick={(e: any) => {
-                                  e?.preventDefault?.();
+                                onClick={() => {
                                   void handlePay(inv.id);
                                 }}
                                 className="px-3 py-1 text-xs font-semibold rounded-lg bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
@@ -727,8 +732,7 @@ export default function PaymentsClient() {
                             {isAdmin ? (
                               <button
                                 type="button"
-                                onClick={async (e: any) => {
-                                  e?.preventDefault?.();
+                                onClick={async () => {
                                   try {
                                     await apiDelete(`/api/v1/invoices/${inv.id}`);
                                     setInvoices((prev) => prev.filter((row) => row.id !== inv.id));

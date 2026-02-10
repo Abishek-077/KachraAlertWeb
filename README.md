@@ -174,3 +174,23 @@ This repo is configured for local development. Production deployments should:
 - Use HTTPS-only cookies
 - Move secrets to a secure secret manager
 - Configure a real email provider for reset links
+
+---
+
+## Vercel Deployment (Frontend)
+
+This repo is a split frontend/backend app.
+
+1. Deploy `back-end` first (Render/Railway/VM/container).
+2. Deploy only `front-end` to Vercel (set project Root Directory to `front-end`).
+3. Configure frontend Vercel env vars:
+   - `API_PROXY_TARGET=https://your-api-domain.com`
+   - `NEXT_PUBLIC_API_URL=` (leave empty to use same-origin `/api/v1` rewrite)
+   - `NEXT_PUBLIC_SOCKET_URL=https://your-api-domain.com` (optional, for realtime sockets)
+   - `NEXT_PUBLIC_ENABLE_SOCKET=false` (or `true` if sockets are available)
+4. Configure backend env vars:
+   - `FRONTEND_URL=https://your-production-frontend-domain.com`
+   - `ALLOW_VERCEL_PREVIEW_ORIGINS=true` (optional, enables `https://*.vercel.app` preview origins)
+   - `COOKIE_SECURE=true`
+
+This setup keeps REST auth cookies on the frontend domain through Vercel rewrites while still allowing direct socket connections when needed.
