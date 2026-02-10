@@ -1,19 +1,43 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, Home, User2, ShieldCheck } from "lucide-react";
+import { Bell, Home, User2, ShieldCheck, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import Button from "./Button";
 import Card, { CardBody, CardHeader } from "./Card";
 import Input from "./Input";
-import { apiGetBlob, apiPatch, apiPost } from "@/app/lib/api";
+import { apiGet, apiGetBlob, apiPatch, apiPost } from "@/app/lib/api";
 import { useAuth } from "@/app/lib/auth-context";
 
-type Tab = "profile" | "address" | "notifications" | "security";
+type Tab = "profile" | "address" | "notifications" | "security" | "rating";
+
+type ServiceRatingSummary = {
+  averageScore: number;
+  totalRatings: number;
+  myRating: {
+    id: string;
+    score: number;
+    comment: string;
+    updatedAt: string;
+  } | null;
+};
+
+type ServiceRatingSaveResponse = {
+  rating: {
+    id: string;
+    score: number;
+    comment: string;
+    updatedAt: string;
+  } | null;
+  averageScore: number;
+  totalRatings: number;
+};
 
 export default function SettingsClient() {
   const [tab, setTab] = useState<Tab>("profile");
-  const { user, refresh } = useAuth();
+  const { user, refresh, logout } = useAuth();
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -27,6 +51,16 @@ export default function SettingsClient() {
   const [profileImageUploading, setProfileImageUploading] = useState(false);
   const profileImageObjectUrl = useRef<string | null>(null);
   const [profileImageRevision, setProfileImageRevision] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(true);
+  const [ratingSaving, setRatingSaving] = useState(false);
+  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingAverage, setRatingAverage] = useState(0);
+  const [ratingTotal, setRatingTotal] = useState(0);
+  const [ratingUpdatedAt, setRatingUpdatedAt] = useState<string | null>(null);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [ratingSavedMessage, setRatingSavedMessage] = useState<string | null>(null);
+  const [switchingAccount, setSwitchingAccount] = useState<"resident" | "admin_driver" | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -89,6 +123,39 @@ export default function SettingsClient() {
     };
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+    const loadRatingSummary = async () => {
+      setRatingLoading(true);
+      setRatingError(null);
+      try {
+        const response = await apiGet<ServiceRatingSummary>("/api/v1/service-ratings/summary");
+        if (!isActive) return;
+        const summary = response.data;
+        setRatingAverage(summary?.averageScore ?? 0);
+        setRatingTotal(summary?.totalRatings ?? 0);
+        if (summary?.myRating) {
+          setRatingScore(summary.myRating.score);
+          setRatingComment(summary.myRating.comment ?? "");
+          setRatingUpdatedAt(summary.myRating.updatedAt);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isActive) {
+          setRatingError("Unable to load rating details right now.");
+        }
+      } finally {
+        if (isActive) {
+          setRatingLoading(false);
+        }
+      }
+    };
+    void loadRatingSummary();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const saveProfile = async () => {
     setSaving(true);
     try {
@@ -116,8 +183,54 @@ export default function SettingsClient() {
     }
   };
 
+  const saveRating = async () => {
+    setRatingSaving(true);
+    setRatingSavedMessage(null);
+    setRatingError(null);
+    try {
+      const response = await apiPost<ServiceRatingSaveResponse>("/api/v1/service-ratings", {
+        score: ratingScore,
+        comment: ratingComment.trim()
+      });
+      const payload = response.data;
+      setRatingAverage(payload?.averageScore ?? 0);
+      setRatingTotal(payload?.totalRatings ?? 0);
+      setRatingUpdatedAt(payload?.rating?.updatedAt ?? null);
+      setRatingSavedMessage("Thanks for rating our service.");
+    } catch (error) {
+      console.error(error);
+      setRatingError("Unable to save your rating right now.");
+    } finally {
+      setRatingSaving(false);
+    }
+  };
+
+  const switchAccount = async (accountType: "resident" | "admin_driver") => {
+    setSwitchingAccount(accountType);
+    router.push("/login");
+    try {
+      await logout();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const tabTitle =
+    tab === "profile"
+      ? "Profile"
+      : tab === "address"
+        ? "Address"
+        : tab === "notifications"
+          ? "Notifications"
+          : tab === "security"
+            ? "Security"
+            : "Service Rating";
+
+  const tabSubtitle =
+    tab === "rating" ? "Rate your pickup and waste management service" : "Update your profile details";
+
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-3 motion-reveal-target">
       <Card className="lg:col-span-1">
         <CardHeader title="Settings" subtitle="Customize your experience" />
         <CardBody>
@@ -146,14 +259,20 @@ export default function SettingsClient() {
             >
               <span className="inline-flex items-center gap-2"><ShieldCheck size={16} /> Security</span>
             </button>
+            <button
+              className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold ${tab === "rating" ? "bg-emerald-500 text-white" : "hover:bg-slate-50"}`}
+              onClick={() => setTab("rating")}
+            >
+              <span className="inline-flex items-center gap-2"><Star size={16} /> Service Rating</span>
+            </button>
           </div>
         </CardBody>
       </Card>
 
       <Card className="lg:col-span-2">
         <CardHeader
-          title={tab === "profile" ? "Profile" : tab === "address" ? "Address" : tab === "notifications" ? "Notifications" : "Security"}
-          subtitle="Update your profile details"
+          title={tabTitle}
+          subtitle={tabSubtitle}
         />
         <CardBody>
           {tab === "profile" ? (
@@ -310,6 +429,101 @@ export default function SettingsClient() {
                 </div>
               </div>
               <Button onClick={() => console.log("Updated")}>Update password</Button>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="font-extrabold">Switch account role</div>
+                <div className="mt-1 text-sm text-slate-500">
+                  Sign out and continue on login as Resident or Admin / Driver.
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={Boolean(switchingAccount)}
+                    onClick={() => {
+                      void switchAccount("resident");
+                    }}
+                  >
+                    {switchingAccount === "resident" ? "Opening login..." : "Login as Resident"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={Boolean(switchingAccount)}
+                    onClick={() => {
+                      void switchAccount("admin_driver");
+                    }}
+                  >
+                    {switchingAccount === "admin_driver" ? "Opening login..." : "Login as Admin / Driver"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {tab === "rating" ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="font-extrabold">Rate our service quality</div>
+                <div className="mt-1 text-sm text-slate-500">
+                  Your feedback helps us improve collection schedules and response time.
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      className="rounded-xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
+                      onClick={() => setRatingScore(score)}
+                      aria-label={`${score} star${score === 1 ? "" : "s"}`}
+                    >
+                      <Star
+                        size={20}
+                        className={score <= ratingScore ? "fill-amber-400 text-amber-400" : "text-slate-300"}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm font-semibold text-slate-700">{ratingScore}/5</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 text-sm font-semibold text-slate-700">Feedback (optional)</div>
+                <textarea
+                  value={ratingComment}
+                  onChange={(event) => setRatingComment(event.target.value)}
+                  maxLength={500}
+                  rows={4}
+                  placeholder="Share what went well and what can be improved."
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-emerald-500/20"
+                />
+                <div className="mt-1 text-xs text-slate-500">{ratingComment.length}/500</div>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-slate-700">
+                <div className="font-semibold">
+                  Community rating: {ratingAverage.toFixed(1)} / 5 ({ratingTotal} ratings)
+                </div>
+                {ratingUpdatedAt ? (
+                  <div className="mt-1 text-xs text-slate-600">
+                    Your latest rating was updated on {new Date(ratingUpdatedAt).toLocaleString()}.
+                  </div>
+                ) : null}
+              </div>
+
+              {ratingLoading ? <div className="text-sm text-slate-500">Loading rating details...</div> : null}
+              {ratingError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                  {ratingError}
+                </div>
+              ) : null}
+              {ratingSavedMessage ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                  {ratingSavedMessage}
+                </div>
+              ) : null}
+
+              <Button onClick={() => void saveRating()} disabled={ratingSaving || ratingLoading}>
+                {ratingSaving ? "Submitting..." : "Submit rating"}
+              </Button>
             </div>
           ) : null}
         </CardBody>

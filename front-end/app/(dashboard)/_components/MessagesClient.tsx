@@ -381,7 +381,7 @@ export default function MessagesClient() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] motion-reveal-target">
       <Card className="h-[72vh]">
         <CardHeader title="Chats" subtitle={`${contacts.length} contacts`} />
         <CardBody>

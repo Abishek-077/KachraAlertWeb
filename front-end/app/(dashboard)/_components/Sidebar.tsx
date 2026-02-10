@@ -63,7 +63,7 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 h-screen border-r border-slate-200 bg-white px-3 py-5 transition-all duration-200",
+        "motion-panel sticky top-0 h-screen border-r border-slate-200 bg-white px-3 py-5 transition-all duration-200 dark:border-slate-800 dark:bg-slate-950",
         collapsed ? "w-[88px]" : "w-[270px]",
       )}
     >
@@ -78,7 +78,7 @@ export default function Sidebar() {
         <button
           type="button"
           className={cn(
-            "ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50",
+            "motion-button ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800",
             collapsed ? "ml-0" : "ml-auto",
           )}
           onClick={() => setCollapsed((prev) => !prev)}
@@ -90,12 +90,12 @@ export default function Sidebar() {
 
       <div
         className={cn(
-          "mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3",
+          "motion-card mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/30",
           collapsed ? "hidden" : "block",
         )}
       >
-        <div className="text-xs font-semibold text-slate-500">Current Mode</div>
-        <div className="mt-0.5 text-sm font-extrabold text-emerald-700">
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Current Mode</div>
+        <div className="mt-0.5 text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
           {role === "admin" ? "Admin / Driver" : "Resident"}
         </div>
       </div>
@@ -109,11 +109,11 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                "motion-nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
                 collapsed ? "justify-center" : "justify-start",
                 active
                   ? "bg-emerald-500 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
               )}
             >
               <Icon size={18} />
@@ -139,11 +139,11 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                    "motion-nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
                     collapsed ? "justify-center" : "justify-start",
                     active
                       ? "bg-emerald-500 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
                   )}
                 >
                   <Icon size={18} />
@@ -161,11 +161,11 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                "motion-nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
                 collapsed ? "justify-center" : "justify-start",
                 active
                   ? "bg-emerald-500 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
               )}
             >
               <Icon size={18} />
@@ -175,10 +175,10 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-6 border-t border-slate-200 pt-4">
+      <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-800">
         <button
           className={cn(
-            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50",
+            "motion-button flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40",
             collapsed ? "justify-center" : "justify-start",
           )}
           onClick={async () => {

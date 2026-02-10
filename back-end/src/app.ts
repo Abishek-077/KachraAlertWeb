@@ -11,6 +11,7 @@ import userRoutes from "./routes/userRoutes.js";
 import schedulesRoutes from "./routes/schedulesRoutes.js";
 import adminUsersRoutes from "./routes/adminUsersRoutes.js";
 import messagesRoutes from "./routes/messagesRoutes.js";
+import serviceRatingsRoutes from "./routes/serviceRatingsRoutes.js";
 import { errorHandler } from "./middleware/error.js";
 import { env } from "./config/env.js";
 
@@ -39,6 +40,7 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/schedules", schedulesRoutes);
 app.use("/api/v1/admin", adminUsersRoutes);
 app.use("/api/v1/messages", messagesRoutes);
+app.use("/api/v1/service-ratings", serviceRatingsRoutes);
 
 app.use(errorHandler);
 

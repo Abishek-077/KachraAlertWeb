@@ -57,7 +57,10 @@ export async function register(payload: {
   return issueTokens(user, meta, false);
 }
 
-export async function login(payload: { email: string; password: string; remember?: boolean }, meta: { ip?: string; userAgent?: string }) {
+export async function login(
+  payload: { email: string; password: string; remember?: boolean; accountType?: "resident" | "admin_driver" },
+  meta: { ip?: string; userAgent?: string }
+) {
   const user = await userRepository.findByEmail(payload.email);
   if (!user) {
     throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
@@ -69,6 +72,10 @@ export async function login(payload: { email: string; password: string; remember
   const matches = await bcrypt.compare(payload.password, user.passwordHash);
   if (!matches) {
     throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
+  }
+
+  if (payload.accountType && normalizeAccountType(user.accountType) !== payload.accountType) {
+    throw new AppError("Selected role does not match this account", 403, "ROLE_MISMATCH");
   }
 
   return issueTokens(user, meta, payload.remember ?? false);

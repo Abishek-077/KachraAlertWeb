@@ -97,7 +97,7 @@ export default function ScheduleClient() {
   const canSubmit = role === "admin" && date && time && !submitting && !scheduleUnavailable;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 motion-reveal-target">
       <Card>
         <CardHeader
           title="Collection schedule"

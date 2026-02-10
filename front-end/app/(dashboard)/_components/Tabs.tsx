@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "./ui";
+import { useLanguage } from "@/app/lib/language-context";
 
 export type Tab = { key: string; label: string };
 
@@ -13,21 +14,23 @@ export default function Tabs({
   value: string;
   onChange: (key: string) => void;
 }) {
+  const { t } = useLanguage();
+
   return (
-    <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1">
-      {tabs.map((t) => {
-        const active = t.key === value;
+    <div className="motion-card inline-flex rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
+      {tabs.map((tabItem) => {
+        const active = tabItem.key === value;
         return (
           <button
-            key={t.key}
+            key={tabItem.key}
             type="button"
-            onClick={() => onChange(t.key)}
+            onClick={() => onChange(tabItem.key)}
             className={cn(
-              "rounded-xl px-3 py-2 text-sm font-semibold transition",
-              active ? "bg-emerald-500 text-white" : "text-slate-600 hover:bg-slate-50",
+              "motion-nav-item rounded-xl px-3 py-2 text-sm font-semibold transition",
+              active ? "bg-emerald-500 text-white" : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
             )}
           >
-            {t.label}
+            {t(tabItem.label)}
           </button>
         );
       })}

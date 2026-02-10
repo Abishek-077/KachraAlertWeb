@@ -38,7 +38,7 @@ export default function ResetPasswordForm() {
     }
 
     return (
-        <div className="w-full max-w-md animate-scale-in">
+        <div className="w-full max-w-md animate-scale-in motion-reveal-target">
             <div className="rounded-3xl border border-slate-200/50 bg-white/90 p-10 shadow-soft backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/90">
                 <div className="text-center">
                     <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-soft">

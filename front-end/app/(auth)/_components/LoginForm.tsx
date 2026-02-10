@@ -35,7 +35,7 @@ export default function LoginForm() {
     }
 
     return (
-        <div className="w-full max-w-md animate-scale-in">
+        <div className="w-full max-w-md animate-scale-in motion-reveal-target">
             <div className="rounded-3xl border border-slate-200/50 bg-white/90 p-10 shadow-soft backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/90">
                 {/* Logo */}
                 <div className="text-center">

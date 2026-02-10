@@ -71,7 +71,7 @@ export default function AdminClient() {
   const doneCount = useMemo(() => queue.filter((q) => q.status === "Done").length, [queue]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 motion-reveal-target">
       <Card>
         <CardHeader
           title="Admin Panel"

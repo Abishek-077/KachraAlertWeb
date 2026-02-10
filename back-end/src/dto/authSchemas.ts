@@ -23,7 +23,8 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  remember: z.boolean().optional()
+  remember: z.boolean().optional(),
+  accountType: z.enum(["resident", "admin_driver"]).optional()
 });
 
 export const refreshSchema = z.object({});

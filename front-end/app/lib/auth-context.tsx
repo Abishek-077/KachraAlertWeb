@@ -77,7 +77,12 @@ type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
   loading: boolean;
-  login: (payload: { email: string; password: string; remember?: boolean }) => Promise<AuthUser>;
+  login: (payload: {
+    email: string;
+    password: string;
+    remember?: boolean;
+    accountType?: "resident" | "admin_driver";
+  }) => Promise<AuthUser>;
   register: (payload: {
     accountType: "resident" | "admin_driver";
     name: string;
@@ -146,16 +151,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(
-    async (payload: { email: string; password: string; remember?: boolean }) => {
+    async (payload: {
+      email: string;
+      password: string;
+      remember?: boolean;
+      accountType?: "resident" | "admin_driver";
+    }) => {
       const response = await apiPost<{ accessToken: string; user: AuthUser }>("/api/v1/auth/login", payload);
-      setToken(response.data.accessToken);
-      setUser(response.data.user);
+      const payloadData = response.data;
+      if (!payloadData) {
+        throw new Error("Invalid login response");
+      }
+      setToken(payloadData.accessToken);
+      setUser(payloadData.user);
       persistAuthCookies({
-        token: response.data.accessToken,
-        user: response.data.user,
+        token: payloadData.accessToken,
+        user: payloadData.user,
         remember: Boolean(payload.remember)
       });
-      return response.data.user;
+      return payloadData.user;
     },
     [setToken]
   );
@@ -173,14 +187,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       terms: boolean;
     }) => {
       const response = await apiPost<{ accessToken: string; user: AuthUser }>("/api/v1/auth/register", payload);
-      setToken(response.data.accessToken);
-      setUser(response.data.user);
+      const payloadData = response.data;
+      if (!payloadData) {
+        throw new Error("Invalid registration response");
+      }
+      setToken(payloadData.accessToken);
+      setUser(payloadData.user);
       persistAuthCookies({
-        token: response.data.accessToken,
-        user: response.data.user,
+        token: payloadData.accessToken,
+        user: payloadData.user,
         remember: true
       });
-      return response.data.user;
+      return payloadData.user;
     },
     [setToken]
   );

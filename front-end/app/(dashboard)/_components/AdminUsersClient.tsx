@@ -67,18 +67,24 @@ export default function AdminUsersClient() {
       try {
         const response = await apiGet<AdminUserApi[]>("/api/v1/admin/users");
         const mapped =
-          response.data?.map((user) => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.accountType === "admin_driver" ? "Admin/Driver" : "Resident",
-            roleKey: user.accountType,
-            status: user.isBanned ? "Banned" : "Active",
-            statusKey: user.isBanned ? "banned" : "active",
-            society: user.society,
-            building: user.building,
-            apartment: user.apartment
-          })) ?? [];
+          response.data?.map((user) => {
+            const role: AdminUser["role"] =
+              user.accountType === "admin_driver" ? "Admin/Driver" : "Resident";
+            const status: AdminUser["status"] = user.isBanned ? "Banned" : "Active";
+            const statusKey: AdminUser["statusKey"] = user.isBanned ? "banned" : "active";
+            return {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role,
+              roleKey: user.accountType,
+              status,
+              statusKey,
+              society: user.society,
+              building: user.building,
+              apartment: user.apartment
+            };
+          }) ?? [];
         setUsers(mapped);
         setLastUpdated(new Date());
       } catch (error) {
@@ -240,7 +246,7 @@ export default function AdminUsersClient() {
   const lastUpdatedLabel = lastUpdated ? lastUpdated.toLocaleString() : "Not synced yet";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 motion-reveal-target">
       <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/70 to-slate-50 p-6 shadow-sm">
         <div className="pointer-events-none absolute -right-20 -top-16 h-48 w-48 rounded-full bg-emerald-200/40 blur-3xl" />
         <div className="pointer-events-none absolute -left-16 bottom-0 h-48 w-48 rounded-full bg-sky-200/30 blur-3xl" />
