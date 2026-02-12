@@ -1,5 +1,7 @@
 # KachraAlert Web ♻️🚨
 
+### Live Demo : https://kachra-alert-web-swms.vercel.app/
+
 KachraAlert Web is a smart waste-management platform with a Next.js frontend and a Node/Express + MongoDB backend. This repo now includes both applications with a secure JWT auth flow, refresh token rotation, and a fully wired UI.
 
 ---
