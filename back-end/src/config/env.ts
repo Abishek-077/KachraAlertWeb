@@ -25,6 +25,7 @@ export const env = {
   refreshTokenDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 7),
   refreshTokenRememberDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS_REMEMBER ?? 30),
   frontendUrl: requireEnv("FRONTEND_URL"),
+  adminAccessCode: process.env.ADMIN_ACCESS_CODE ?? "soul777",
   cookieDomain: process.env.COOKIE_DOMAIN,
   cookieSecure: process.env.COOKIE_SECURE === "true"
 };

@@ -33,6 +33,7 @@ export default function RegisterForm() {
             name: "",
             email: "",
             phone: "",
+            adminCode: "",
             password: ""
         }
     });
@@ -196,6 +197,22 @@ export default function RegisterForm() {
                                 )}
                             </div>
                         ))}
+
+                        {step1Form.watch("accountType") === "admin_driver" && (
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Admin Access Code</label>
+                                <input
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-500"
+                                    placeholder="Enter admin access code"
+                                    {...step1Form.register("adminCode")}
+                                />
+                                {step1Form.formState.errors.adminCode && (
+                                    <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">
+                                        {step1Form.formState.errors.adminCode.message}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Password */}
                         <div>
