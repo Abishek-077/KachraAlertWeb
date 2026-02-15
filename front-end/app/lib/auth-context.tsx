@@ -77,9 +77,10 @@ type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
   loading: boolean;
-  login: (payload: { email: string; password: string; remember?: boolean }) => Promise<AuthUser>;
+  login: (payload: { email: string; password: string; adminCode?: string; remember?: boolean }) => Promise<AuthUser>;
   register: (payload: {
     accountType: "resident" | "admin_driver";
+    adminCode?: string;
     name: string;
     email: string;
     phone: string;
@@ -146,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(
-    async (payload: { email: string; password: string; remember?: boolean }) => {
+    async (payload: { email: string; password: string; adminCode?: string; remember?: boolean }) => {
       const response = await apiPost<{ accessToken: string; user: AuthUser }>("/api/v1/auth/login", payload);
       setToken(response.data.accessToken);
       setUser(response.data.user);
@@ -163,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (payload: {
       accountType: "resident" | "admin_driver";
+      adminCode?: string;
       name: string;
       email: string;
       phone: string;

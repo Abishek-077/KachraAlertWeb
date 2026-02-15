@@ -11,6 +11,7 @@ const passwordSchema = z
 export const loginSchema = z.object({
     email: z.string().email("Invalid email format"),
     password: z.string().min(1, "Password is required"),
+    adminCode: z.string().optional(),
     remember: z.boolean().optional()
 });
 
@@ -20,10 +21,19 @@ export const registerStep1Schema = z.object({
     accountType: z.enum(["resident", "admin_driver"], {
         message: "Please choose account type"
     }),
+    adminCode: z.string().optional(),
     name: z.string().min(2, "Name is required"),
     email: z.string().email("Invalid email format"),
     phone: z.string().min(7, "Phone is required"),
     password: passwordSchema
+}).superRefine((data, ctx) => {
+    if (data.accountType === "admin_driver" && (!data.adminCode || !data.adminCode.trim())) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["adminCode"],
+            message: "Admin access code is required"
+        });
+    }
 });
 
 export type RegisterStep1Data = z.infer<typeof registerStep1Schema>;

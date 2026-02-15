@@ -26,6 +26,7 @@ type TokenExpiresIn = NonNullable<SignOptions["expiresIn"]>;
 
 export async function register(payload: {
   accountType: "resident" | "admin_driver";
+  adminCode?: string;
   name: string;
   email: string;
   phone: string;
@@ -35,6 +36,10 @@ export async function register(payload: {
   apartment: string;
   terms: boolean;
 }, meta: { ip?: string; userAgent?: string }) {
+  if (payload.accountType === "admin_driver" && payload.adminCode !== env.adminAccessCode) {
+    throw new AppError("Invalid admin access code", 403, "INVALID_ADMIN_CODE");
+  }
+
   const existing = await userRepository.findByEmail(payload.email);
   if (existing) {
     throw new AppError("Account already exists", 409, "ACCOUNT_EXISTS");
@@ -56,7 +61,7 @@ export async function register(payload: {
   return issueTokens(user, meta, false);
 }
 
-export async function login(payload: { email: string; password: string; remember?: boolean }, meta: { ip?: string; userAgent?: string }) {
+export async function login(payload: { email: string; password: string; adminCode?: string; remember?: boolean }, meta: { ip?: string; userAgent?: string }) {
   const user = await userRepository.findByEmail(payload.email);
   if (!user) {
     throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
@@ -65,6 +70,10 @@ export async function login(payload: { email: string; password: string; remember
   const matches = await bcrypt.compare(payload.password, user.passwordHash);
   if (!matches) {
     throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
+  }
+
+  if (user.accountType === "admin_driver" && payload.adminCode !== env.adminAccessCode) {
+    throw new AppError("Invalid admin access code", 403, "INVALID_ADMIN_CODE");
   }
 
   return issueTokens(user, meta, payload.remember ?? false);

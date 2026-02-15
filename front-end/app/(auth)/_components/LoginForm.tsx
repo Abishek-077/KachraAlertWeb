@@ -21,13 +21,13 @@ export default function LoginForm() {
         formState: { errors, isSubmitting }
     } = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
-        defaultValues: { email: "", password: "", remember: false }
+        defaultValues: { email: "", password: "", adminCode: "", remember: false }
     });
 
     async function onSubmit(values: LoginFormData) {
         setMessage(null);
         try {
-            await login({ email: values.email, password: values.password, remember: values.remember });
+            await login({ email: values.email, password: values.password, adminCode: values.adminCode, remember: values.remember });
             router.push("/dashboard");
         } catch (e: any) {
             setMessage(e?.message ?? "Login failed");
@@ -88,6 +88,19 @@ export default function LoginForm() {
                         </div>
                         {errors.password && (
                             <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">{errors.password.message}</p>
+                        )}
+                    </div>
+
+
+                    <div>
+                        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Admin Access Code (admins only)</label>
+                        <input
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-500"
+                            placeholder="Enter admin code if your account is admin"
+                            {...register("adminCode")}
+                        />
+                        {errors.adminCode && (
+                            <p className="mt-2 text-xs font-medium text-red-500 dark:text-red-400">{errors.adminCode.message}</p>
                         )}
                     </div>
 

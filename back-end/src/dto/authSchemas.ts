@@ -10,6 +10,7 @@ const passwordSchema = z
 
 export const registerSchema = z.object({
   accountType: z.enum(["resident", "admin_driver"]),
+  adminCode: z.string().optional(),
   name: z.string().min(2),
   email: z.string().email(),
   phone: z.string().min(7),
@@ -23,6 +24,7 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  adminCode: z.string().optional(),
   remember: z.boolean().optional()
 });
 
