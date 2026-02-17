@@ -1,3 +1,4 @@
+import React from "react";
 import { cn } from "./ui";
 
 export default function Input({

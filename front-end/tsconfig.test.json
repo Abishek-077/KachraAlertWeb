@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "types": ["node"],
+    "resolveJsonModule": true
+  },
+  "include": [
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "app/lib/api.ts",
+    "app/(dashboard)/_components/ui.ts",
+    "app/(dashboard)/_components/Button.tsx",
+    "app/(dashboard)/_components/Badge.tsx",
+    "app/(dashboard)/_components/Card.tsx",
+    "app/(dashboard)/_components/Input.tsx",
+    "app/(dashboard)/_components/StatCard.tsx",
+    "app/(dashboard)/_components/Tabs.tsx",
+    "lib/demo-data.ts",
+    "lib/types.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}
