@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { cn } from "./ui";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";

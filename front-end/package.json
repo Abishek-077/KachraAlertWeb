@@ -6,7 +6,8 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && npx tsc -p tsconfig.test.json && node --test .test-dist/tests/**/*.test.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
