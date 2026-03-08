@@ -1,198 +1,203 @@
-# KachraAlert Web ♻️🚨
+# KachraAlert Web Backend API ♻️🚨
 
-### Live Demo : https://kachra-alert-web-swms.vercel.app/
-
-KachraAlert Web is a smart waste-management platform with a Next.js frontend and a Node/Express + MongoDB backend. This repo now includes both applications with a secure JWT auth flow, refresh token rotation, and a fully wired UI.
-
----...
-
-## ✨ Overview
-- **Frontend**: Next.js App Router, Tailwind CSS, React Hook Form + Zod.
-- **Backend**: Node/Express, MongoDB/Mongoose, JWT access + refresh tokens, token rotation, rate limiting, and security middleware.
+This repository now contains the **backend service only** for KachraAlert Web.  
+It is a Node.js + Express + TypeScript API backed by MongoDB, with JWT auth, refresh-token rotation, admin/user workflows, and real-time messaging support through Socket.IO.
 
 ---
 
-## 🗂️ Repository Structure
-```
+## 📦 Tech Stack
+
+- **Runtime**: Node.js
+- **Framework**: Express 4
+- **Language**: TypeScript
+- **Database**: MongoDB + Mongoose
+- **Authentication**: JWT (access + refresh token flow)
+- **Validation**: Zod
+- **Security**: Helmet, CORS allowlist, HttpOnly cookies, bcrypt password hashing, rate limiting
+- **Realtime**: Socket.IO
+
+---
+
+## 🗂️ Project Structure
+
+```text
 KachraAlertWeb/
-├─ front-end/                 # Next.js app
-└─ back-end/                  # Express API
+└─ back-end/
+   ├─ src/
+   │  ├─ app.ts                 # Express app + middleware + route registration
+   │  ├─ server.ts              # DB connection + HTTP/Socket server bootstrap
+   │  ├─ config/                # env parsing and configuration
+   │  ├─ controllers/           # request/response orchestration
+   │  ├─ services/              # business logic helpers
+   │  ├─ repositories/          # DB interaction abstraction
+   │  ├─ dto/                   # Zod schemas for validation
+   │  ├─ middleware/            # auth, validation, error handling, upload, rate limits
+   │  ├─ models/                # Mongoose models
+   │  ├─ routes/                # API route definitions
+   │  └─ utils/                 # shared utility functions (jwt, socket, crypto, etc.)
+   └─ tests/
+      ├─ unit/
+      └─ integration/
 ```
 
 ---
 
-## ✅ Getting Started
+## 🚀 Getting Started
 
-### 1) Backend (API)
+### 1) Install dependencies
 
-**Install dependencies**
-```
+```bash
 cd back-end
 npm install
 ```
 
-**Create env file**
-```
+### 2) Create environment file
+
+```bash
 cp .env.example .env
 ```
 
-**Run the API**
-```
+### 3) Required environment variables
+
+These are required by `src/config/env.ts`:
+
+- `MONGODB_URI`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `FRONTEND_URL` (comma-separated origins supported)
+
+Common optional variables:
+
+- `PORT` (default: `4000`)
+- `NODE_ENV` (default: `development`)
+- `ACCESS_TOKEN_TTL` (default: `15m`)
+- `REFRESH_TOKEN_TTL_DAYS` (default: `7`)
+- `REFRESH_TOKEN_TTL_DAYS_REMEMBER` (default: `30`)
+- `ALLOW_VERCEL_PREVIEW_ORIGINS` (`true|false`)
+- `COOKIE_DOMAIN`
+- `COOKIE_SECURE` (`true|false`)
+
+### 4) Run in development
+
+```bash
 npm run dev
 ```
 
-The API runs on **http://localhost:4000** by default.
+API default URL: `http://localhost:4000`
 
-### 2) Frontend (Next.js)
+### 5) Build and run production
 
-**Install dependencies**
-```
-cd front-end
-npm install
-```
-
-**Create env file**
-```
-cp .env.example .env.local
-```
-
-**Run the app**
-```
-npm run dev
-```
-
-The UI runs on **http://localhost:3000** by default.
-
----
-
-## 🔐 Auth API Reference (Base: `/api/v1/auth`)
-
-### `POST /register`
-Registers a user and returns access token + user. Sets refresh token cookie.
-
-### `POST /login`
-Logs in and returns access token + user. Sets refresh token cookie. Supports `remember` for longer refresh TTL.
-
-### `GET /me`
-Requires access token header. Returns current user.
-
-### `POST /refresh`
-Rotates refresh token. Returns new access token + user.
-
-### `POST /logout`
-Revokes refresh token and clears cookie.
-
-### `POST /forgot-password`
-Returns success message. In dev, includes `devResetToken` in response.
-
-### `POST /reset-password`
-Resets password using reset token.
-
-### `GET /oauth/:provider/start` and `GET /oauth/:provider/callback`
-Returns 501 (OAuth not configured).
-
----
-
-## 🌐 Example cURL Requests
-
-**Register**
 ```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"accountType":"resident","name":"Test User","email":"user@example.com","phone":"9800000000","password":"StrongPass1!","society":"Green Valley","building":"Block A","apartment":"A-12","terms":true}'
-```
-
-**Login (remember me)**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"StrongPass1!","remember":true}'
-```
-
-**Me (requires access token)**
-```bash
-curl -i http://localhost:4000/api/v1/auth/me \
-  -H "Authorization: Bearer <ACCESS_TOKEN>"
-```
-
-**Refresh**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/refresh \
-  --cookie "refreshToken=<REFRESH_TOKEN>"
-```
-
-**Logout**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/logout \
-  --cookie "refreshToken=<REFRESH_TOKEN>"
-```
-
-**Forgot password**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com"}'
-```
-
-**Reset password**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/reset-password \
-  -H "Content-Type: application/json" \
-  -d '{"token":"<RESET_TOKEN>","password":"NewStrongPass1!"}'
+npm run build
+npm start
 ```
 
 ---
 
-## ✅ Test Checklist
-- Register as **resident**
-- Register as **admin_driver**
-- Login (normal)
-- Login with **remember me** and verify refresh cookie lifetime
-- Refresh token flow after page reload
-- Logout invalidates session
-- Forgot/reset password flow in dev mode (copy `devResetToken` into reset page)
+## 🧭 Available Scripts
+
+From `back-end/package.json`:
+
+- `npm run dev` → start dev server with `tsx watch`
+- `npm run build` → compile TypeScript to `dist/`
+- `npm start` → run compiled server
+- `npm test` → run all tests in `tests/**/*.test.ts`
+- `npm run test:watch` → watch mode tests
 
 ---
 
-## 🛡️ Security Highlights
-- JWT access tokens with short TTL
-- HttpOnly refresh cookie with rotation + reuse detection
-- Rate limiting on login + forgot-password
-- Password hashing (bcrypt)
-- Centralized error handling + Zod validation
-- CORS with credentials + Helmet
+## 🔐 Authentication Flow
+
+Base path: `/api/v1/auth`
+
+- `POST /register` — create account
+- `POST /login` — authenticate user
+- `GET /me` — get current user (requires access token)
+- `POST /refresh` — rotate refresh token and issue new access token
+- `POST /logout` — invalidate refresh token
+- `POST /forgot-password` — request password reset
+- `POST /reset-password` — reset password with token
+- `GET /oauth/:provider/start` and `/callback` — OAuth placeholders (not configured)
+
+Security details:
+
+- Access tokens are short-lived JWTs.
+- Refresh tokens are persisted and rotated.
+- Refresh tokens are handled via cookies for browser clients.
+- Login/forgot-password endpoints have request-rate limiting.
 
 ---
 
-## 🔧 Environment Notes
-- The frontend expects `NEXT_PUBLIC_API_URL` to point to the backend.
-- Backend requires `MONGODB_URI`, JWT secrets, and `FRONTEND_URL`.
+## 📚 API Modules (Route Groups)
+
+All routes are mounted in `src/app.ts` under `/api/v1`:
+
+- `/auth` → authentication and account bootstrap
+- `/alerts` → alert listing, broadcast (admin), read/ack actions
+- `/reports` → report CRUD-style workflows with attachments
+- `/invoices` → invoice creation/listing/payment/fee updates
+- `/users` → self profile + admin user listing/detail
+- `/schedules` → schedule list + admin schedule management
+- `/admin` → admin-only user management endpoints
+- `/messages` → contact list + conversation + message CRUD actions
+- `/service-ratings` → rating submission + summary
 
 ---
 
-## 📌 Reminder
-This repo is configured for local development. Production deployments should:
-- Set `COOKIE_SECURE=true`
-- Use HTTPS-only cookies
-- Move secrets to a secure secret manager
-- Configure a real email provider for reset links
+## 🛡️ Security and Middleware
+
+Configured in `src/app.ts` and middleware modules:
+
+- `helmet()` for secure HTTP headers
+- CORS with dynamic allowlist (`isAllowedCorsOrigin`)
+- `express.json({ limit: "12mb" })` payload limit
+- `cookie-parser` for cookie handling
+- `morgan` request logging
+- centralized error middleware (`errorHandler`)
+- auth middleware (`requireAuth`, `requireAdmin`)
+- Zod request validation (`validateBody`)
 
 ---
 
-## Vercel Deployment (Frontend)
+## 🔄 Real-Time Messaging
 
-This repo is a split frontend/backend app.
+Socket.IO is initialized in `src/server.ts` through `initSocket(httpServer)`.  
+This enables real-time communication features alongside REST endpoints.
 
-1. Deploy `back-end` first (Render/Railway/VM/container).
-2. Deploy only `front-end` to Vercel (set project Root Directory to `front-end`).
-3. Configure frontend Vercel env vars:
-   - `API_PROXY_TARGET=https://your-api-domain.com`
-   - `NEXT_PUBLIC_API_URL=` (leave empty to use same-origin `/api/v1` rewrite)
-   - `NEXT_PUBLIC_SOCKET_URL=https://your-api-domain.com` (optional, for realtime sockets)
-   - `NEXT_PUBLIC_ENABLE_SOCKET=false` (or `true` if sockets are available)
-4. Configure backend env vars:
-   - `FRONTEND_URL=https://your-production-frontend-domain.com`
-   - `ALLOW_VERCEL_PREVIEW_ORIGINS=true` (optional, enables `https://*.vercel.app` preview origins)
-   - `COOKIE_SECURE=true`
+---
 
-This setup keeps REST auth cookies on the frontend domain through Vercel rewrites while still allowing direct socket connections when needed.
+## 🧪 Testing
+
+Run:
+
+```bash
+cd back-end
+npm test
+```
+
+Test folders:
+
+- `tests/unit` for utility/schema/middleware-level behavior
+- `tests/integration` for route-level behavior
+
+---
+
+## ✅ Health Checks
+
+- `GET /` returns service metadata
+- `GET /api/v1/health` returns basic health status
+
+Example:
+
+```bash
+curl -i http://localhost:4000/api/v1/health
+```
+
+---
+
+## 📌 Notes for Deployment
+
+- Use a production MongoDB instance and secure secrets management.
+- Set `COOKIE_SECURE=true` in HTTPS environments.
+- Configure `FRONTEND_URL` with the exact deployed client origins.
+- If deployed behind a proxy/load-balancer, production mode enables `trust proxy`.
