@@ -1,200 +1,57 @@
-# KachraAlert Web ♻️🚨
+# KachraAlert API
 
-### Live Demo : https://kachra-alert-web-swms.vercel.app/
+Public backend repository for KachraAlert.
 
-## 🚀 Hosted Backend API: https://kachraalertserver.onrender.com
+## Live services
 
-KachraAlert Web is a smart waste-management platform with a Next.js frontend and a Node/Express + MongoDB backend. This repo now includes both applications with a secure JWT auth flow, refresh token rotation, and a fully wired UI.
+- Frontend: deployed separately from a private repository
+- Backend API: https://kachraalertserver.onrender.com
 
----...
+## Repository structure
 
-## ✨ Overview
-- **Frontend**: Next.js App Router, Tailwind CSS, React Hook Form + Zod.
-- **Backend**: Node/Express, MongoDB/Mongoose, JWT access + refresh tokens, token rotation, rate limiting, and security middleware.
-
----
-
-## 🗂️ Repository Structure
-```
+```text
 KachraAlertWeb/
-├─ front-end/                 # Next.js app
-└─ back-end/                  # Express API
+└─ back-end/   # Express API
 ```
 
----
+## Local development
 
-## ✅ Getting Started
-
-### 1) Backend (API)
-
-**Install dependencies**
-```
+```bash
 cd back-end
 npm install
-```
-
-**Create env file**
-```
-cp .env.example .env
-```
-
-**Run the API**
-```
+copy .env.example .env
 npm run dev
 ```
 
-The API runs on **http://localhost:4000** by default.
+The API runs on `http://localhost:4000` by default.
 
-### 2) Frontend (Next.js)
+## Required backend environment variables
 
-**Install dependencies**
-```
-cd front-end
-npm install
-```
+- `MONGODB_URI`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `FRONTEND_URL`
+- `COOKIE_SECURE`
 
-**Create env file**
-```
-cp .env.example .env.local
-```
+Optional:
 
-**Run the app**
-```
-npm run dev
-```
+- `ALLOW_VERCEL_PREVIEW_ORIGINS`
+- `COOKIE_DOMAIN`
 
-The UI runs on **http://localhost:3000** by default.
+## Auth routes
 
----
+Base path: `/api/v1/auth`
 
-## 🔐 Auth API Reference (Base: `/api/v1/auth`)
+- `POST /register`
+- `POST /login`
+- `GET /me`
+- `POST /refresh`
+- `POST /logout`
+- `POST /forgot-password`
+- `POST /reset-password`
 
-### `POST /register`
-Registers a user and returns access token + user. Sets refresh token cookie.
+## Production notes
 
-### `POST /login`
-Logs in and returns access token + user. Sets refresh token cookie. Supports `remember` for longer refresh TTL.
-
-### `GET /me`
-Requires access token header. Returns current user.
-
-### `POST /refresh`
-Rotates refresh token. Returns new access token + user.
-
-### `POST /logout`
-Revokes refresh token and clears cookie.
-
-### `POST /forgot-password`
-Returns success message. In dev, includes `devResetToken` in response.
-
-### `POST /reset-password`
-Resets password using reset token.
-
-### `GET /oauth/:provider/start` and `GET /oauth/:provider/callback`
-Returns 501 (OAuth not configured).
-
----
-
-## 🌐 Example cURL Requests
-
-**Register**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"accountType":"resident","name":"Test User","email":"user@example.com","phone":"9800000000","password":"StrongPass1!","society":"Green Valley","building":"Block A","apartment":"A-12","terms":true}'
-```
-
-**Login (remember me)**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"StrongPass1!","remember":true}'
-```
-
-**Me (requires access token)**
-```bash
-curl -i http://localhost:4000/api/v1/auth/me \
-  -H "Authorization: Bearer <ACCESS_TOKEN>"
-```
-
-**Refresh**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/refresh \
-  --cookie "refreshToken=<REFRESH_TOKEN>"
-```
-
-**Logout**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/logout \
-  --cookie "refreshToken=<REFRESH_TOKEN>"
-```
-
-**Forgot password**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com"}'
-```
-
-**Reset password**
-```bash
-curl -i -X POST http://localhost:4000/api/v1/auth/reset-password \
-  -H "Content-Type: application/json" \
-  -d '{"token":"<RESET_TOKEN>","password":"NewStrongPass1!"}'
-```
-
----
-
-## ✅ Test Checklist
-- Register as **resident**
-- Register as **admin_driver**
-- Login (normal)
-- Login with **remember me** and verify refresh cookie lifetime
-- Refresh token flow after page reload
-- Logout invalidates session
-- Forgot/reset password flow in dev mode (copy `devResetToken` into reset page)
-
----
-
-## 🛡️ Security Highlights
-- JWT access tokens with short TTL
-- HttpOnly refresh cookie with rotation + reuse detection
-- Rate limiting on login + forgot-password
-- Password hashing (bcrypt)
-- Centralized error handling + Zod validation
-- CORS with credentials + Helmet
-
----
-
-## 🔧 Environment Notes
-- The frontend expects `NEXT_PUBLIC_API_URL` to point to the backend.
-- Backend requires `MONGODB_URI`, JWT secrets, and `FRONTEND_URL`.
-
----
-
-## 📌 Reminder
-This repo is configured for local development. Production deployments should:
-- Set `COOKIE_SECURE=true`
 - Use HTTPS-only cookies
-- Move secrets to a secure secret manager
-- Configure a real email provider for reset links
-
----
-
-## Vercel Deployment (Frontend)
-
-This repo is a split frontend/backend app.
-
-1. Deploy `back-end` first (Render/Railway/VM/container).
-2. Deploy only `front-end` to Vercel (set project Root Directory to `front-end`).
-3. Configure frontend Vercel env vars:
-   - `API_PROXY_TARGET=https://your-api-domain.com`
-   - `NEXT_PUBLIC_API_URL=` (leave empty to use same-origin `/api/v1` rewrite)
-   - `NEXT_PUBLIC_SOCKET_URL=https://your-api-domain.com` (optional, for realtime sockets)
-   - `NEXT_PUBLIC_ENABLE_SOCKET=false` (or `true` if sockets are available)
-4. Configure backend env vars:
-   - `FRONTEND_URL=https://your-production-frontend-domain.com`
-   - `ALLOW_VERCEL_PREVIEW_ORIGINS=true` (optional, enables `https://*.vercel.app` preview origins)
-   - `COOKIE_SECURE=true`
-
-This setup keeps REST auth cookies on the frontend domain through Vercel rewrites while still allowing direct socket connections when needed.
+- Keep secrets outside the repository
+- Point `FRONTEND_URL` at the deployed frontend domain
