@@ -19,7 +19,7 @@ KachraAlertWeb/
 ```bash
 cd back-end
 npm install
-copy .env.example .env
+.env
 npm run dev
 ```
 
